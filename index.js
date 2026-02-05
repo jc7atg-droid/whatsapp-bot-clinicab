@@ -35,25 +35,39 @@ async function start() {
     }
   })
 
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0]
-    if (!msg.message) return
+const cooldowns = {}
 
-    const from = msg.key.remoteJid
+sock.ev.on("messages.upsert", async ({ messages }) => {
 
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      ""
+  const msg = messages[0]
+  if (!msg.message) return
 
-    if (!text) return
+  // ❌ no responderse a sí mismo
+  if (msg.key.fromMe) return
 
-    console.log("MENSAJE:", text)
+  const from = msg.key.remoteJid
 
-    await sock.sendMessage(from, {
-      text: "Hola, soy el asistente automático de la clínica."
-    })
+  const text =
+    msg.message.conversation ||
+    msg.message.extendedTextMessage?.text ||
+    ""
+
+  if (!text) return
+
+  // ⏱️ COOLDOWN (5 segundos por chat)
+  const now = Date.now()
+
+  if (cooldowns[from] && now - cooldowns[from] < 5000) {
+    return   // ignora si escribe muy rápido
+  }
+
+  cooldowns[from] = now
+
+  console.log("MENSAJE:", text)
+
+  await sock.sendMessage(from, {
+    text: "Hola, soy el asistente automático de la clínica."
   })
-}
+})
 
 start()
