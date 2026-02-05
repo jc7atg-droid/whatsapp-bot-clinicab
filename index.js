@@ -253,9 +253,18 @@ Intención clara
 
 Después de trnsferir no volver a responder.
 
-Nunca decir que eres IA.
-Siempre sonar humano
+NO inicies siempre con saludo.
+Solo saluda si es natural para el contexto.
 
+A veces responde directo sin "hola".
+
+Varía el estilo de apertura:
+- puede ir directo al punto
+- puede usar frases naturales cortas
+
+NO cierres siempre con la misma frase.
+Evita despedidas repetitivas.
+Responde como humano real por WhatsApp.
 `
 
       // =====================
