@@ -114,6 +114,7 @@ async function startBot() {
     if (!msg?.message || msg.key.fromMe) return
 
     const from = msg.key.remoteJid
+    const phoneNumber = msg.key.participant || from // Obtener número real del participante
     
     // Extraer texto de mensaje normal
     let text = 
@@ -1414,7 +1415,7 @@ Preguntó precio pero no profundizó ni dio nombre. Posible comparación de prec
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: ${from.replace("@s.whatsapp.net", "")}
+📱 Número: +${phoneNumber.replace("@s.whatsapp.net", "")}
 
 ${summary}
 
@@ -1438,7 +1439,7 @@ ${summary}
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: ${from.replace("@s.whatsapp.net", "")}
+📱 Número: +${phoneNumber.replace("@s.whatsapp.net", "")}
 
 ⚠️ Error generando resumen automático.
 Revisar conversación directamente.
