@@ -93,7 +93,11 @@ async function transcribeAudio(audioBuffer) {
 async function startBot() {
 
   const { state, saveCreds } = await useMultiFileAuthState("./auth" + Date.now())
-  const sock = makeWASocket({ auth: state })
+  const sock = makeWASocket({ 
+  auth: state,
+  printQRInTerminal: true,
+  qrTimeout: 50000
+})
 
   sock.ev.on("creds.update", saveCreds)
 
