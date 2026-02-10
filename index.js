@@ -4,6 +4,16 @@ const OpenAI = require("openai")
 const fs = require('fs')
 const path = require('path')
 require('dotenv').config()  // ← AGREGA ESTA LÍNEA
+require('dotenv').config()
+
+// ✅ Limpiar auth si existe variable CLEAR_AUTH
+if (process.env.CLEAR_AUTH === 'true') {
+  const authPath = './auth'
+  if (fs.existsSync(authPath)) {
+    fs.rmSync(authPath, { recursive: true, force: true })
+    console.log('🧹 Carpeta auth eliminada')
+  }
+}
 
 /* ================= CONFIG ================= */
 /* ================= CONFIG ================= */
