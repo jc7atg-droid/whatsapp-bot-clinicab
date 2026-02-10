@@ -3,11 +3,13 @@ const qrcode = require("qrcode-terminal")
 const OpenAI = require("openai")
 const fs = require('fs')
 const path = require('path')
+require('dotenv').config()  // ← AGREGA ESTA LÍNEA
 
+/* ================= CONFIG ================= */
 /* ================= CONFIG ================= */
 
 // ⚠️ IMPORTANTE: Reemplaza "TU_API_KEY_AQUI" con tu API key real de OpenAI
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY
 
 const NOTIFY_NUMBER = "573044356143@s.whatsapp.net"
 const BUFFER_TIME = 7000 // 7 segundos para agrupar mensajes
