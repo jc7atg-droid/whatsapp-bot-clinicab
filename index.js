@@ -1,5 +1,5 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys")
-const QRCode = require('qrcode')
+const qrcode = require("qrcode-terminal")
 const OpenAI = require("openai")
 const fs = require('fs')
 const path = require('path')
@@ -93,23 +93,12 @@ async function transcribeAudio(audioBuffer) {
 async function startBot() {
 
   const { state, saveCreds } = await useMultiFileAuthState("./auth" + Date.now())
-  const sock = makeWASocket({ 
-  auth: state,
-  printQRInTerminal: true,
-  qrTimeout: 50000
-})
+  const sock = makeWASocket({ auth: state })
 
   sock.ev.on("creds.update", saveCreds)
 
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
-    if (qr) {
-      QRCode.toString(qr, { type: 'terminal', small: false }, (err, url) => {
-        console.log('\n\n')
-        console.log(url)
-        console.log('\n\n')
-      })
-    }
-    
+    if (qr) qrcode.generate(qr, { small: true })
     if (connection === "open") console.log("✅ WhatsApp conectado")
 
     if (connection === "close") {
