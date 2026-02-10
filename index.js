@@ -102,7 +102,11 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds)
 
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
-    if (qr) qrcode.generate(qr, { small: true })
+    if (qr) {
+  console.log('\n\n========== ESCANEA ESTE QR ==========\n')
+  qrcode.generate(qr, { small: false })
+  console.log('\n=====================================\n\n')
+}
     if (connection === "open") console.log("✅ WhatsApp conectado")
 
     if (connection === "close") {
