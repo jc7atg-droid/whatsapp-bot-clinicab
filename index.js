@@ -1083,6 +1083,18 @@ NUNCA termines abruptamente con "¿Cómo te llamas?"
 - "¿Cómo te llamas?" (solo, sin conector)
 - "Tu nombre?" (muy seco)
 
+IMPORTANTE - RECOPILACIÓN DE DATOS:
+Después de obtener el nombre, pregunta la edad de forma natural y casual:
+
+✅ EJEMPLOS CORRECTOS:
+- "Perfecto, [Nombre]. ¿Y cuántos años tienes?"
+- "Dale, [Nombre]. ¿Qué edad tienes?"
+- "Genial, [Nombre]. ¿Cuántos años?"
+
+NO insistas si no quieren dar la edad. Si evaden la pregunta o no responden, continúa con la transferencia.
+
+La edad ayuda a la coordinadora a prepararse mejor para la cita.
+
 3. ESPACIADO Y RESPIRACIÓN:
 Usa líneas en blanco entre bloques de información:
 
@@ -1247,7 +1259,7 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
 
       /* ===== TRANSFERENCIA FORZADA ===== */
       if (isUrgent(combinedText) || isFrustrated(combinedText)) {
-        await transferToHuman(sock, from, chatHistory[from])
+        await transferToHuman(sock, from, phoneNumber, chatHistory[from])
         return
       }
 
@@ -1272,7 +1284,7 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
           if (cleanReply) {
             await sock.sendMessage(from, { text: cleanReply })
           }
-          await transferToHuman(sock, from, chatHistory[from])
+          await transferToHuman(sock, from, phoneNumber, chatHistory[from])
           return
         }
 
@@ -1284,7 +1296,7 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
         console.log("❌ IA ERROR:", err.message)
 
         if (iaFailures >= 3) {
-          await transferToHuman(sock, from, chatHistory[from])
+          await transferToHuman(sock, from, phoneNumber, chatHistory[from])
         } else {
           await sock.sendMessage(from, {
             text: "Disculpa, tuve un inconveniente técnico momentáneo. ¿Podrías repetir tu mensaje? 😊"
@@ -1298,7 +1310,7 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
 
 /* ================= TRANSFER ================= */
 
-async function transferToHuman(sock, from, conversationHistory) {
+async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
 
   humanChats.add(from)
 
@@ -1315,6 +1327,7 @@ Analiza la conversación y genera un resumen estructurado para la coordinadora.
 FORMATO OBLIGATORIO (usar exactamente este formato):
 
 👤 PACIENTE: [nombre o "No proporcionó"]
+👶 EDAD: [edad o "No proporcionó"]
 🦷 SERVICIO: [servicio principal]
 ⚡ URGENCIA: [Alta/Media/Baja]
 
@@ -1388,6 +1401,7 @@ Paciente: ok gracias
 Análisis:
 
 👤 PACIENTE: No proporcionó
+👶 EDAD: No proporcionó
 🦷 SERVICIO: Ortodoncia
 ⚡ URGENCIA: Baja
 
