@@ -91,15 +91,8 @@ async function transcribeAudio(audioBuffer) {
 /* ================= BOT ================= */
 
 async function startBot() {
-  
-  // Forzar limpieza de auth
-const authPath = './auth'
-if (fs.existsSync(authPath)) {
-  fs.rmSync(authPath, { recursive: true, force: true })
-  console.log('🧹 Auth limpiado forzosamente')
-}
 
-  const { state, saveCreds } = await useMultiFileAuthState("./auth")
+  const { state, saveCreds } = await useMultiFileAuthState("./auth" + Date.now())
   const sock = makeWASocket({ auth: state })
 
   sock.ev.on("creds.update", saveCreds)
