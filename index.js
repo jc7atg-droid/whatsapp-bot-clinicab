@@ -3,26 +3,19 @@ const qrcode = require("qrcode-terminal")
 const OpenAI = require("openai")
 const fs = require('fs')
 const path = require('path')
-require('dotenv').config()  // ← AGREGA ESTA LÍNEA
 require('dotenv').config()
 
-// ✅ Limpiar auth si existe variable CLEAR_AUTH
-if (process.env.CLEAR_AUTH === 'true') {
-  const authPath = './auth'
-  if (fs.existsSync(authPath)) {
-    fs.rmSync(authPath, { recursive: true, force: true })
-    console.log('🧹 Carpeta auth eliminada')
-  }
+/* ================= CONFIG ================= */
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+
+if (!OPENAI_API_KEY) {
+  console.error("❌ ERROR: Falta OPENAI_API_KEY")
+  process.exit(1)
 }
 
-/* ================= CONFIG ================= */
-/* ================= CONFIG ================= */
-
-// ⚠️ IMPORTANTE: Reemplaza "TU_API_KEY_AQUI" con tu API key real de OpenAI
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY
-
 const NOTIFY_NUMBER = "573044356143@s.whatsapp.net"
-const BUFFER_TIME = 7000 // 7 segundos para agrupar mensajes
+const BUFFER_TIME = 7000
 const MAX_DAILY_RESPONSES = 300
 
 /* ================= OPENAI ================= */
