@@ -1464,11 +1464,3 @@ server.listen(PORT, () => {
 });
 
 startBot()
-
-// Keep alive HTTP server
-http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('Bot running');
-}).listen(process.env.PORT || 8080, () => {
-  console.log('HTTP server running');
-});
