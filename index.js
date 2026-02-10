@@ -7,7 +7,7 @@ const path = require('path')
 /* ================= CONFIG ================= */
 
 // ⚠️ IMPORTANTE: Reemplaza "TU_API_KEY_AQUI" con tu API key real de OpenAI
-const OPENAI_API_KEY = "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"
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
 const NOTIFY_NUMBER = "573044356143@s.whatsapp.net"
 const BUFFER_TIME = 7000 // 7 segundos para agrupar mensajes
