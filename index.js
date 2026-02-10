@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys")
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } = require("@whiskeysockets/baileys")
 const qrcode = require("qrcode-terminal")
 const OpenAI = require("openai")
 const fs = require('fs')
@@ -152,7 +152,7 @@ async function startBot() {
         // Descargar audio
         let audioBuffer
         try {
-          audioBuffer = await sock.downloadMediaMessage(msg)
+          audioBuffer = await downloadMediaMessage(msg, 'buffer', {})
           console.log(`✅ Audio descargado: ${audioBuffer ? audioBuffer.length : 0} bytes`)
         } catch (downloadErr) {
           console.log(`❌ Error descargando audio:`, downloadErr.message)
