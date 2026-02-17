@@ -36,6 +36,7 @@ const chatHistory = {}
 const humanChats = new Set()
 const hasGreeted = {}
 const processingLocks = {} // Locks para evitar procesamiento simultáneo
+const activeProcessing = {} // Flag para saber si hay procesamiento activo (esperando GPT)
 
 /* ================= UTILS ================= */
 
@@ -397,7 +398,24 @@ async function startBot() {
     timers[from] = setTimeout(async () => {
       
       console.log(`\n🔥 TIMER EJECUTADO para ${from}`)
-      console.log(`📦 Mensajes en buffer: ${buffers[from].length}`)
+      
+      // ✅ CRITICAL: Si ya hay un procesamiento activo, NO continuar
+      if (activeProcessing[from]) {
+        console.log(`⚠️ Procesamiento activo detectado - CANCELANDO este timer`)
+        return
+      }
+      
+      console.log(`📦 Mensajes en buffer: ${buffers[from] ? buffers[from].length : 0}`)
+      
+      // Verificar que el buffer no esté vacío
+      if (!buffers[from] || buffers[from].length === 0) {
+        console.log(`⚠️ Buffer vacío - CANCELANDO`)
+        return
+      }
+      
+      // Marcar como procesamiento activo
+      activeProcessing[from] = true
+      console.log(`🔒 Procesamiento marcado como ACTIVO`)
       
       // Combinar todos los mensajes del buffer
       const combinedText = buffers[from].join("\n")
@@ -414,6 +432,7 @@ async function startBot() {
       resetDailyCounter()
       if (dailyCount >= MAX_DAILY_RESPONSES) {
         console.log("⚠️ Límite diario alcanzado")
+        activeProcessing[from] = false
         return
       }
       
@@ -1480,12 +1499,19 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
             await sendHumanizedMessages(sock, from, cleanReply)
           }
           await transferToHuman(sock, from, phoneNumber, chatHistory[from])
+          // Desmarcar procesamiento activo
+          activeProcessing[from] = false
+          console.log(`🔓 Procesamiento marcado como INACTIVO (transferido)`)
           return
         }
 
         // Enviar respuesta de forma humanizada con delays
         await sendHumanizedMessages(sock, from, reply)
         iaFailures = 0
+        
+        // Desmarcar procesamiento activo
+        activeProcessing[from] = false
+        console.log(`🔓 Procesamiento marcado como INACTIVO (completado)`)
 
       } catch (err) {
         iaFailures++
@@ -1505,6 +1531,10 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
             text: "Disculpa, tuve un inconveniente técnico momentáneo. ¿Podrías repetir tu mensaje? 😊"
           })
         }
+        
+        // Desmarcar procesamiento activo
+        activeProcessing[from] = false
+        console.log(`🔓 Procesamiento marcado como INACTIVO (error)`)
       }
 
     }, BUFFER_TIME) // 7 segundos
