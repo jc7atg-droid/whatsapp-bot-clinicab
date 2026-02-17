@@ -365,26 +365,39 @@ async function startBot() {
 
     /* ===== BUFFER MEJORADO ===== */
     
+    console.log(`\n📥 Mensaje recibido de ${from}`)
+    console.log(`Texto: "${text.substring(0, 50)}..."`)
+    
     // Inicializar buffer si no existe
     if (!buffers[from]) buffers[from] = []
     
     // Agregar mensaje al buffer
     buffers[from].push(text)
+    console.log(`📦 Buffer ahora tiene ${buffers[from].length} mensaje(s)`)
     
     // ✅ FIX CRÍTICO: Si ya hay un timer, CANCELARLO y crear uno nuevo
     if (timers[from]) {
+      console.log(`⏱️ Timer existente detectado - CANCELANDO`)
       clearTimeout(timers[from])
     }
     
     // Crear nuevo timer que espera BUFFER_TIME (7 segundos)
+    console.log(`⏱️ Iniciando nuevo timer de 7 segundos`)
     timers[from] = setTimeout(async () => {
+      
+      console.log(`\n🔥 TIMER EJECUTADO para ${from}`)
+      console.log(`📦 Mensajes en buffer: ${buffers[from].length}`)
       
       // Combinar todos los mensajes del buffer
       const combinedText = buffers[from].join("\n")
       
+      console.log(`📝 Texto combinado: "${combinedText.substring(0, 100)}..."`)
+      
       // Limpiar buffer y timer
       buffers[from] = []
       timers[from] = null
+      
+      console.log(`🧹 Buffer y timer limpiados`)
       
       // Verificar límite diario
       resetDailyCounter()
