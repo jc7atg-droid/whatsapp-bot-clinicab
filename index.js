@@ -69,15 +69,31 @@ function calculateTypingDelay(text) {
 }
 
 async function sendHumanizedMessages(sock, from, fullReply) {
+  // DEBUG: Ver qué está generando GPT
+  console.log('\n========== DEBUG SEPARACIÓN ==========')
+  console.log('Respuesta original de GPT:')
+  console.log(JSON.stringify(fullReply))
+  console.log('=====================================\n')
+  
   // Detectar 2 o más líneas en blanco consecutivas (3+ \n) como separadores de mensaje
   // Reemplazar 3 o más \n con un separador único
   const normalized = fullReply.replace(/\n{3,}/g, '|||SPLIT|||')
+  
+  console.log('Después de normalizar:')
+  console.log(JSON.stringify(normalized))
+  console.log('=====================================\n')
   
   // Separar por el marcador
   let messages = normalized
     .split('|||SPLIT|||')
     .map(m => m.trim())
     .filter(m => m.length > 0)
+  
+  console.log(`Total de mensajes detectados: ${messages.length}`)
+  messages.forEach((msg, i) => {
+    console.log(`Mensaje ${i + 1}:`, msg.substring(0, 50) + '...')
+  })
+  console.log('=====================================\n')
   
   // Limitar a máximo 3 mensajes
   if (messages.length > 3) {
