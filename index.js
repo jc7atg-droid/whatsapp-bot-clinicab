@@ -16,7 +16,7 @@ if (!OPENAI_API_KEY) {
 
 const NOTIFY_NUMBER = "573044356143@s.whatsapp.net"
 const BUFFER_TIME = 7000
-const MAX_DAILY_RESPONSES = 300
+const MAX_DAILY_RESPONSES = 500
 
 /* ================= OPENAI ================= */
 
@@ -69,11 +69,19 @@ function calculateTypingDelay(text) {
 }
 
 async function sendHumanizedMessages(sock, from, fullReply) {
-  // Separar por doble salto de línea (párrafos)
-  const messages = fullReply
-    .split('\n\n')
+  // Separar por TRIPLE salto de línea (solo cuando GPT quiere separar explícitamente)
+  let messages = fullReply
+    .split('\n\n\n')
     .map(m => m.trim())
     .filter(m => m.length > 0)
+  
+  // Limitar a máximo 3 mensajes
+  if (messages.length > 3) {
+    // Combinar los mensajes extras al final
+    const firstTwo = messages.slice(0, 2)
+    const remaining = messages.slice(2).join('\n\n')
+    messages = [...firstTwo, remaining]
+  }
   
   // Si solo hay un mensaje, enviarlo normalmente con delay
   if (messages.length === 1) {
@@ -170,6 +178,16 @@ async function startBot() {
 
     const from = msg.key.remoteJid
     const phoneNumber = msg.key.participant || from // Obtener número real del participante
+    
+    // ✅ Marcar mensaje como leído (doble check azul) si NO está en modo humano
+    if (!humanChats.has(from)) {
+      try {
+        await sock.readMessages([msg.key])
+      } catch (e) {
+        // Ignorar error si no se puede marcar como leído
+        console.log("⚠️ No se pudo marcar como leído:", e.message)
+      }
+    }
     
     // Extraer texto de mensaje normal
     let text = 
@@ -371,36 +389,54 @@ BALANCE PERFECTO:
 Piensa en: Asesor de una clínica médica seria pero humana.
 
 FORMATO DE RESPUESTAS:
-- Separa tus respuestas en párrafos cortos usando DOBLE salto de línea (
+- Usa DOBLE salto de línea (
 
-)
-- Cada párrafo debe ser un pensamiento completo y breve
-- Máximo 3 párrafos por respuesta
+) para separar párrafos DENTRO de un mismo mensaje
+- Usa TRIPLE salto de línea (
+
+
+) SOLO cuando quieras enviar mensajes SEPARADOS
+- Máximo 3 mensajes separados por respuesta (usa triple salto con moderación)
 - Evita muros de texto en un solo bloque
 
 EJEMPLOS DE FORMATO CORRECTO:
 
-Primer contacto:
+Primer contacto (2 mensajes separados):
 ✅ "Bienvenido a la Clínica Bocas y Boquitas 😊
+
+
 
 ¿En qué puedo ayudarte?"
 
-Mensajes siguientes:
-✅ "Claro, te explico cómo funciona
+Mensajes siguientes (TODO EN UN MENSAJE con párrafos internos):
+✅ "Claro, te cuento las opciones que manejamos:
 
-La ortodoncia invisible se fabrica aquí mismo en nuestro laboratorio, personalizada 100% para ti.
+• Brackets convencionales
+• Brackets de autoligado (más rápidos)
+• Alineadores invisibles (discretos)
 
-¿Te gustaría agendar una evaluación?"
+La evaluación de ortodoncia son $100.000 e incluye todo.
 
-✅ "Perfecto. Te cuento las opciones
 
-Tenemos brackets metálicos desde $X y ortodoncia invisible desde $Y.
 
-¿Cuál te llama más la atención?"
+¿Te gustaría agendar?"
+
+O si necesitas más separación (2-3 mensajes):
+✅ "Entiendo tu situación
+
+
+
+Te cuento que tenemos opciones de financiamiento desde $X mensuales.
+
+La evaluación completa son $100.000.
+
+
+
+¿Cuándo te gustaría venir?"
 
 ❌ "Hey! ¿Qué necesitas?" (demasiado informal)
 ❌ "¡Hola! 😊 Bienvenido nuevamente..." (no repitas bienvenida)
-❌ Todo en un solo bloque sin separar párrafos
+❌ Separar CADA párrafo en mensaje distinto (usar triple salto en exceso)
 </voice_personality>
 
 <forbidden_patterns>
