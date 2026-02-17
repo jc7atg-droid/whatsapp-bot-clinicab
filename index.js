@@ -54,6 +54,61 @@ function isFrustrated(text) {
   return /(ya te dije|no entiendes|que fastidio|molesto|😡|🤦)/i.test(text)
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function calculateTypingDelay(text) {
+  const words = text.trim().split(/\s+/).length
+  const baseDelay = 1000 // 1 segundo base
+  const perWord = 120    // 120ms por palabra (velocidad humana de escritura)
+  const calculated = baseDelay + (words * perWord)
+  const maxDelay = 5000  // Máximo 5 segundos por mensaje
+  const minDelay = 1500  // Mínimo 1.5 segundos
+  return Math.max(minDelay, Math.min(calculated, maxDelay))
+}
+
+async function sendHumanizedMessages(sock, from, fullReply) {
+  // Separar por doble salto de línea (párrafos)
+  const messages = fullReply
+    .split('\n\n')
+    .map(m => m.trim())
+    .filter(m => m.length > 0)
+  
+  // Si solo hay un mensaje, enviarlo normalmente con delay
+  if (messages.length === 1) {
+    const delay = calculateTypingDelay(messages[0])
+    await sock.sendPresenceUpdate('composing', from)
+    await sleep(delay)
+    await sock.sendMessage(from, { text: messages[0] })
+    await sock.sendPresenceUpdate('paused', from)
+    return
+  }
+  
+  // Si hay múltiples mensajes, enviarlos con delays progresivos
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i]
+    const delay = calculateTypingDelay(message)
+    
+    // Mostrar "escribiendo..."
+    await sock.sendPresenceUpdate('composing', from)
+    
+    // Esperar según cantidad de palabras
+    await sleep(delay)
+    
+    // Enviar mensaje
+    await sock.sendMessage(from, { text: message })
+    
+    // Quitar "escribiendo..."
+    await sock.sendPresenceUpdate('paused', from)
+    
+    // Pausa breve entre mensajes (800ms) para que se note la separación
+    if (i < messages.length - 1) {
+      await sleep(800)
+    }
+  }
+}
+
 /* ================= TRANSCRIPCIÓN DE AUDIO ================= */
 
 async function transcribeAudio(audioBuffer) {
@@ -315,18 +370,37 @@ BALANCE PERFECTO:
 
 Piensa en: Asesor de una clínica médica seria pero humana.
 
-EJEMPLOS DE TONO CORRECTO:
+FORMATO DE RESPUESTAS:
+- Separa tus respuestas en párrafos cortos usando DOBLE salto de línea (
+
+)
+- Cada párrafo debe ser un pensamiento completo y breve
+- Máximo 3 párrafos por respuesta
+- Evita muros de texto en un solo bloque
+
+EJEMPLOS DE FORMATO CORRECTO:
 
 Primer contacto:
-✅ "Bienvenido a la Clínica Bocas y Boquitas 😊 ¿En qué puedo ayudarte?"
+✅ "Bienvenido a la Clínica Bocas y Boquitas 😊
+
+¿En qué puedo ayudarte?"
 
 Mensajes siguientes:
-✅ "Claro, te explico cómo funciona"
-✅ "Perfecto. Te cuento las opciones"
-✅ "Entiendo. Déjame orientarte"
+✅ "Claro, te explico cómo funciona
+
+La ortodoncia invisible se fabrica aquí mismo en nuestro laboratorio, personalizada 100% para ti.
+
+¿Te gustaría agendar una evaluación?"
+
+✅ "Perfecto. Te cuento las opciones
+
+Tenemos brackets metálicos desde $X y ortodoncia invisible desde $Y.
+
+¿Cuál te llama más la atención?"
 
 ❌ "Hey! ¿Qué necesitas?" (demasiado informal)
 ❌ "¡Hola! 😊 Bienvenido nuevamente..." (no repitas bienvenida)
+❌ Todo en un solo bloque sin separar párrafos
 </voice_personality>
 
 <forbidden_patterns>
@@ -1264,6 +1338,9 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
       }
 
       try {
+        // Mostrar "escribiendo..." mientras GPT piensa
+        await sock.sendPresenceUpdate('composing', from)
+        
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
@@ -1274,26 +1351,38 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
           max_tokens: 500
         })
 
+        // Quitar "escribiendo..." inmediatamente después de recibir respuesta
+        await sock.sendPresenceUpdate('paused', from)
+
         const reply = response.choices[0].message.content.trim()
         chatHistory[from].push({ role: "assistant", content: reply })
         dailyCount++
 
-        // Detectar [HUMANO] con regex
+        // Detectar [HUMANO] con regex y filtrar ANTES de dividir
         if (/\[HUMANO\]/i.test(reply)) {
           const cleanReply = reply.replace(/\[HUMANO\]/i, "").trim()
           if (cleanReply) {
-            await sock.sendMessage(from, { text: cleanReply })
+            // Enviar mensaje limpio de forma humanizada
+            await sendHumanizedMessages(sock, from, cleanReply)
           }
           await transferToHuman(sock, from, phoneNumber, chatHistory[from])
           return
         }
 
-        await sock.sendMessage(from, { text: reply })
+        // Enviar respuesta de forma humanizada con delays
+        await sendHumanizedMessages(sock, from, reply)
         iaFailures = 0
 
       } catch (err) {
         iaFailures++
         console.log("❌ IA ERROR:", err.message)
+
+        // Quitar "escribiendo..." en caso de error
+        try {
+          await sock.sendPresenceUpdate('paused', from)
+        } catch (e) {
+          // Ignorar error de presenceUpdate
+        }
 
         if (iaFailures >= 3) {
           await transferToHuman(sock, from, phoneNumber, chatHistory[from])
