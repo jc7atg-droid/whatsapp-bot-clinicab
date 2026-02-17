@@ -58,6 +58,30 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+function extractPhoneNumber(from, participant) {
+  // Prioridad 1: Si viene de chat directo (número@s.whatsapp.net)
+  if (from.includes('@s.whatsapp.net')) {
+    return from.replace('@s.whatsapp.net', '')
+  }
+  
+  // Prioridad 2: Si hay participant (mensajes de grupo)
+  if (participant && participant.includes('@s.whatsapp.net')) {
+    return participant.replace('@s.whatsapp.net', '')
+  }
+  
+  // Prioridad 3: Si tiene @lid (LinkedIn ID), intentar extraer del from
+  if (from.includes('@lid')) {
+    // El from en grupos suele ser: numero@g.us o similar
+    // El participant tiene el número real
+    if (participant) {
+      return participant.replace('@s.whatsapp.net', '').replace('@lid', '')
+    }
+  }
+  
+  // Fallback: devolver lo que sea, limpiando sufijos conocidos
+  return from.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
+}
+
 function calculateTypingDelay(text) {
   const words = text.trim().split(/\s+/).length
   const baseDelay = 1000 // 1 segundo base
@@ -202,6 +226,11 @@ async function startBot() {
     // ✅ Marcar mensaje como leído (doble check azul) si NO está en modo humano
     if (!humanChats.has(from)) {
       try {
+        // Si es el primer mensaje del chat, esperar 3 segundos antes de marcar como leído
+        const isFirstMessage = !chatHistory[from] || chatHistory[from].length === 0
+        if (isFirstMessage) {
+          await sleep(3000) // 3 segundos de delay solo para el primer mensaje
+        }
         await sock.readMessages([msg.key])
       } catch (e) {
         // Ignorar error si no se puede marcar como leído
@@ -1452,6 +1481,9 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
 async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
 
   humanChats.add(from)
+  
+  // Extraer número real del paciente
+  const realPhoneNumber = extractPhoneNumber(from, phoneNumber)
 
   try {
     const summaryResponse = await openai.chat.completions.create({
@@ -1459,99 +1491,61 @@ async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
       messages: [
         {
           role: "system",
-          content: `Eres un analista de leads odontológicos experto en neuroventas.
+          content: `Eres un asistente que resume conversaciones de pacientes para la coordinadora de una clínica dental.
 
-Analiza la conversación y genera un resumen estructurado para la coordinadora.
+Genera un resumen ÚTIL y ACCIONABLE en formato conversacional.
 
-FORMATO OBLIGATORIO (usar exactamente este formato):
+FORMATO OBLIGATORIO:
 
-👤 PACIENTE: [nombre o "No proporcionó"]
-👶 EDAD: [edad o "No proporcionó"]
-🦷 SERVICIO: [servicio principal]
-⚡ URGENCIA: [Alta/Media/Baja]
+📋 RESUMEN:
+[2-3 oraciones describiendo qué pasó en la conversación, qué preguntó, qué dijo el bot]
 
-📊 PRONÓSTICO:
-[Interesado y listo / Solo preguntón / Comparando precios / No interesado]
+🎯 DATOS CLAVE:
+• Nombre: [nombre o "No proporcionó"]
+• Edad: [edad o "No proporcionó"] 
+• Servicio de interés: [ortodoncia/diseño/limpieza/etc]
+• Urgencia: [Alta/Media/Baja - basado en tono y contexto]
 
-🎯 ESTRATEGIA:
-[1-2 líneas: cómo abordar según perfil detectado]
-
-📋 NOTAS:
-[Detalles importantes de la conversación]
+💡 SIGUIENTE PASO:
+[Qué debe hacer la coordinadora: agendar evaluación, llamar para explicar opciones, enviar info adicional, etc. SER ESPECÍFICO]
 
 ---
 
-GUÍA DE PRONÓSTICO:
+GUÍA DE URGENCIA:
+• Alta: Dolor, emergencia, menciona fechas específicas, pide agendar ya
+• Media: Interesado pero no urgente, explorando opciones, pregunta precios
+• Baja: Solo pregunta general, no da datos, "lo voy a pensar"
 
-"Interesado y listo":
-- Preguntó por agendar
-- Dio su nombre voluntariamente
-- Hizo preguntas específicas sobre el tratamiento
-- Mencionó fechas/disponibilidad
-- Tono decidido
-
-"Solo preguntón":
-- Solo pregunta precios
-- No da información personal
-- Respuestas cortas
-- No profundiza en detalles
-- Tono superficial
-
-"Comparando precios":
-- Menciona otras clínicas
-- Enfoque excesivo en precio
-- Pregunta por descuentos
-- No interés en calidad/experiencia
-- Tono negociador
-
-"No interesado":
-- Responde con evasivas
-- "Lo voy a pensar"
-- No hace preguntas de seguimiento
-- Tono desinteresado
-
----
-
-ESTRATEGIAS DE NEUROVENTAS:
-
-Para "Interesado y listo":
-→ "Agendar YA. Paciente caliente. Priorizar disponibilidad inmediata."
-
-Para "Solo preguntón":
-→ "Anclar valor. Explicar diferenciadores. Preguntar: ¿cuándo pensabas hacerlo?"
-
-Para "Comparando precios":
-→ "No competir por precio. Resaltar experiencia 30 años + tecnología + seguridad. Caso de éxito."
-
-Para "No interesado":
-→ "Preguntar objeción real. Si persiste, dar espacio. Seguimiento suave en 2-3 días."
+GUÍA DE SIGUIENTE PASO:
+• Si dio nombre y preguntó precio → "Llamar para agendar evaluación de [servicio] y confirmar disponibilidad"
+• Si solo preguntó info → "Enviar mensaje explicando proceso y pedir mejor horario para llamar"
+• Si pidió hablar directo → "Contactar inmediatamente, está esperando respuesta"
+• Si mencionó urgencia/dolor → "PRIORIDAD: Agendar cita urgente hoy o mañana"
 
 ---
 
 EJEMPLO:
 
 Conversación:
-Paciente: necesito ortodoncia
-Bot: opciones...
-Paciente: cuanto cuesta
-Bot: $100.000 evaluación...
-Paciente: ok gracias
+Paciente: hola, necesito ortodoncia
+Bot: bienvenida, opciones...
+Paciente: cuanto cuesta la invisible
+Bot: evaluación $100.000...
+Paciente: ok, quiero hablar con alguien
 
-Análisis:
+Resumen:
 
-👤 PACIENTE: No proporcionó
-👶 EDAD: No proporcionó
-🦷 SERVICIO: Ortodoncia
-⚡ URGENCIA: Baja
+📋 RESUMEN:
+Paciente preguntó por ortodoncia, específicamente interesado en alineadores invisibles. El bot le explicó las opciones y el costo de evaluación ($100.000). Solicitó hablar con una persona para más detalles.
 
-📊 PRONÓSTICO:
-Solo preguntón
+🎯 DATOS CLAVE:
+• Nombre: No proporcionó
+• Edad: No proporcionó
+• Servicio de interés: Ortodoncia invisible
+• Urgencia: Media
 
-🎯 ESTRATEGIA:
-Anclar valor de la evaluación. Preguntar cuándo pensaba iniciar tratamiento para detectar urgencia real.
-
-📋 NOTAS:
-Preguntó precio pero no profundizó ni dio nombre. Posible comparación de precios.`
+💡 SIGUIENTE PASO:
+Llamar para explicar proceso de ortodoncia invisible, enviar casos antes/después si es posible, y agendar evaluación si está interesado.`
         },
         {
           role: "user",
@@ -1559,7 +1553,7 @@ Preguntó precio pero no profundizó ni dio nombre. Posible comparación de prec
         }
       ],
       temperature: 0.3,
-      max_tokens: 300
+      max_tokens: 400
     })
 
     const summary = summaryResponse.choices[0].message.content.trim()
@@ -1568,7 +1562,7 @@ Preguntó precio pero no profundizó ni dio nombre. Posible comparación de prec
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: +${phoneNumber.replace("@s.whatsapp.net", "")}
+📱 Número: +${realPhoneNumber}
 
 ${summary}
 
@@ -1590,7 +1584,7 @@ ${summary}
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: +${phoneNumber.replace("@s.whatsapp.net", "")}
+📱 Número: +${realPhoneNumber}
 
 ⚠️ Error generando resumen automático.
 Revisar conversación directamente.
