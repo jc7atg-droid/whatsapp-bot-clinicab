@@ -223,6 +223,14 @@ async function startBot() {
     const from = msg.key.remoteJid
     const phoneNumber = msg.key.participant || from // Obtener número real del participante
     
+    // DEBUG: Ver información del mensaje para diagnosticar número
+    console.log('\n========== DEBUG NÚMERO ==========')
+    console.log('from (remoteJid):', from)
+    console.log('participant:', msg.key.participant)
+    console.log('phoneNumber (calculado):', phoneNumber)
+    console.log('msg.key completo:', JSON.stringify(msg.key, null, 2))
+    console.log('==================================\n')
+    
     // ✅ Marcar mensaje como leído (doble check azul) si NO está en modo humano
     if (!humanChats.has(from)) {
       try {
