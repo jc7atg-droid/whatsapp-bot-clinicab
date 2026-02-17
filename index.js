@@ -75,9 +75,9 @@ async function sendHumanizedMessages(sock, from, fullReply) {
   console.log(JSON.stringify(fullReply))
   console.log('=====================================\n')
   
-  // Detectar 2 o más líneas en blanco consecutivas (3+ \n) como separadores de mensaje
-  // Reemplazar 3 o más \n con un separador único
-  const normalized = fullReply.replace(/\n{3,}/g, '|||SPLIT|||')
+  // Detectar 2 o más saltos de línea (1+ línea en blanco) como separadores de mensaje
+  // \n\n = 1 línea en blanco → separar en mensaje distinto
+  const normalized = fullReply.replace(/\n\n+/g, '|||SPLIT|||')
   
   console.log('Después de normalizar:')
   console.log(JSON.stringify(normalized))
@@ -410,50 +410,46 @@ Piensa en: Asesor de una clínica médica seria pero humana.
 
 FORMATO DE RESPUESTAS:
 
-Escribe de forma natural usando líneas en blanco para dar respiración al texto.
+Separa tus respuestas en 2-3 bloques usando UNA línea en blanco entre bloques.
+Cada bloque se enviará como un mensaje separado.
 
-Separa bloques de información con 2-3 líneas en blanco cuando quieras que se envíen como mensajes distintos.
+REGLA SIMPLE:
+- Línea en blanco = nuevo mensaje
+- Texto corrido = mismo mensaje
+- Máximo 3 bloques/mensajes
 
 EJEMPLOS:
 
 Primer contacto (2 mensajes):
 "Bienvenido a la Clínica Bocas y Boquitas 😊
 
-
 ¿En qué puedo ayudarte?"
 
-Consulta de ortodoncia (2-3 mensajes):
+Consulta de ortodoncia (3 mensajes):
 "Claro, te cuento las opciones que manejamos:
-
 • Brackets convencionales
-• Brackets de autoligado (más rápidos, menos fricción)
-• Alineadores invisibles (discretos, cómodos)
-• Ortopedia maxilar (para niños y adolescentes)
+• Brackets de autoligado (más rápidos)
+• Alineadores invisibles (discretos)
+• Ortopedia maxilar (niños/adolescentes)
 
 La evaluación de ortodoncia son $100.000 e incluye radiografías, análisis completo y plan de tratamiento con costos.
-
 
 Para empezar, ¿cómo te llamas?"
 
 Información general (2 mensajes):
 "Entiendo tu situación.
 
-
-Te cuento que tenemos opciones de financiamiento desde $X mensuales.
-
-La evaluación completa son $100.000 e incluye todo el análisis.
-
+Te cuento que tenemos opciones de financiamiento desde $X mensuales. La evaluación completa son $100.000 e incluye todo el análisis.
 
 ¿Cuándo te gustaría venir?"
 
 PROHIBIDO:
-❌ Mandar TODO en un solo bloque sin respiración
-❌ "Hey! ¿Qué necesitas?" (demasiado informal)
-❌ "¡Hola! 😊 Bienvenido nuevamente..." (no repitas bienvenida)
+❌ Mandar TODO pegado sin líneas en blanco
+❌ Más de 3 bloques
 
 OBLIGATORIO:
-✅ Usar líneas en blanco para separar bloques de información
-✅ Máximo 3 bloques/mensajes por respuesta
+✅ Usar líneas en blanco para separar en 2-3 mensajes
+✅ Máximo 3 bloques por respuesta
 ✅ Mantener tono profesional pero cercano
 </voice_personality>
 
