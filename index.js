@@ -35,6 +35,7 @@ const timers = {}
 const chatHistory = {}
 const humanChats = new Set()
 const hasGreeted = {}
+const processingLocks = {} // Locks para evitar procesamiento simultáneo
 
 /* ================= UTILS ================= */
 
@@ -363,7 +364,17 @@ async function startBot() {
     
     if (humanChats.has(from)) return
 
-    /* ===== BUFFER MEJORADO ===== */
+    /* ===== BUFFER MEJORADO CON LOCK ===== */
+    
+    // ✅ CRITICAL FIX: Esperar si ya se está procesando un mensaje de este chat
+    while (processingLocks[from]) {
+      console.log(`🔒 Esperando lock para ${from}...`)
+      await sleep(50) // Esperar 50ms y volver a intentar
+    }
+    
+    // Establecer lock
+    processingLocks[from] = true
+    console.log(`🔓 Lock adquirido para ${from}`)
     
     console.log(`\n📥 Mensaje recibido de ${from}`)
     console.log(`Texto: "${text.substring(0, 50)}..."`)
@@ -1497,6 +1508,10 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
       }
 
     }, BUFFER_TIME) // 7 segundos
+    
+    // ✅ Liberar lock inmediatamente después de crear el timer
+    processingLocks[from] = false
+    console.log(`🔓 Lock liberado para ${from}\n`)
   })
 }
 
