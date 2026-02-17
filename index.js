@@ -69,9 +69,13 @@ function calculateTypingDelay(text) {
 }
 
 async function sendHumanizedMessages(sock, from, fullReply) {
-  // Separar por TRIPLE salto de línea (solo cuando GPT quiere separar explícitamente)
-  let messages = fullReply
-    .split('\n\n\n')
+  // Detectar 2 o más líneas en blanco consecutivas (3+ \n) como separadores de mensaje
+  // Reemplazar 3 o más \n con un separador único
+  const normalized = fullReply.replace(/\n{3,}/g, '|||SPLIT|||')
+  
+  // Separar por el marcador
+  let messages = normalized
+    .split('|||SPLIT|||')
     .map(m => m.trim())
     .filter(m => m.length > 0)
   
@@ -388,45 +392,52 @@ BALANCE PERFECTO:
 
 Piensa en: Asesor de una clínica médica seria pero humana.
 
-FORMATO DE RESPUESTAS - MUY IMPORTANTE:
+FORMATO DE RESPUESTAS:
 
-REGLA DE ORO: Separa tus respuestas en 2-3 MENSAJES DISTINTOS usando exactamente 3 saltos de línea seguidos.
+Escribe de forma natural usando líneas en blanco para dar respiración al texto.
 
-Cómo separar mensajes:
-- Entre mensaje 1 y mensaje 2: usa exactamente "\n\n\n" (3 saltos)
-- Entre mensaje 2 y mensaje 3: usa exactamente "\n\n\n" (3 saltos)
-- Dentro de un mismo mensaje para separar párrafos: usa "\n\n" (2 saltos)
+Separa bloques de información con 2-3 líneas en blanco cuando quieras que se envíen como mensajes distintos.
 
-ESTRUCTURA TÍPICA (2-3 mensajes):
-
-Mensaje 1: Saludo/respuesta inicial
-
-
-Mensaje 2: Información principal (con listas, detalles, párrafos internos usando \n\n)
-
-
-Mensaje 3: Pregunta de cierre o siguiente paso
-
-EJEMPLOS LITERALES:
+EJEMPLOS:
 
 Primer contacto (2 mensajes):
-"Bienvenido a la Clínica Bocas y Boquitas 😊\n\n\n¿En qué puedo ayudarte?"
+"Bienvenido a la Clínica Bocas y Boquitas 😊
 
-Consulta de ortodoncia (3 mensajes):
-"Claro, te cuento las opciones que manejamos:\n\n• Brackets convencionales\n• Brackets de autoligado (más rápidos, menos fricción)\n• Alineadores invisibles (discretos, cómodos)\n• Ortopedia maxilar (para niños y adolescentes)\n\nLa evaluación de ortodoncia son $100.000 e incluye radiografías, análisis completo y plan de tratamiento con costos.\n\n\nPara empezar, ¿cómo te llamas?"
+
+¿En qué puedo ayudarte?"
+
+Consulta de ortodoncia (2-3 mensajes):
+"Claro, te cuento las opciones que manejamos:
+
+• Brackets convencionales
+• Brackets de autoligado (más rápidos, menos fricción)
+• Alineadores invisibles (discretos, cómodos)
+• Ortopedia maxilar (para niños y adolescentes)
+
+La evaluación de ortodoncia son $100.000 e incluye radiografías, análisis completo y plan de tratamiento con costos.
+
+
+Para empezar, ¿cómo te llamas?"
 
 Información general (2 mensajes):
-"Entiendo tu situación.\n\n\nTe cuento que tenemos opciones de financiamiento desde $X mensuales.\n\nLa evaluación completa son $100.000 e incluye todo el análisis.\n\n\n¿Cuándo te gustaría venir?"
+"Entiendo tu situación.
+
+
+Te cuento que tenemos opciones de financiamiento desde $X mensuales.
+
+La evaluación completa son $100.000 e incluye todo el análisis.
+
+
+¿Cuándo te gustaría venir?"
 
 PROHIBIDO:
-❌ Mandar TODO en un solo bloque
-❌ Usar solo \n\n (doble salto) para separar mensajes
-❌ No separar en mensajes distintos
-❌ Hacer más de 3 mensajes
+❌ Mandar TODO en un solo bloque sin respiración
+❌ "Hey! ¿Qué necesitas?" (demasiado informal)
+❌ "¡Hola! 😊 Bienvenido nuevamente..." (no repitas bienvenida)
 
 OBLIGATORIO:
-✅ Separar en 2-3 mensajes usando \n\n\n (triple salto)
-✅ Dentro de cada mensaje, usar \n\n (doble salto) para párrafos
+✅ Usar líneas en blanco para separar bloques de información
+✅ Máximo 3 bloques/mensajes por respuesta
 ✅ Mantener tono profesional pero cercano
 </voice_personality>
 
