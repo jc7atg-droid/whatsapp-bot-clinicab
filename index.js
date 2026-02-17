@@ -58,28 +58,30 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function extractPhoneNumber(from, participant) {
-  // Prioridad 1: Si viene de chat directo (número@s.whatsapp.net)
-  if (from.includes('@s.whatsapp.net')) {
-    return from.replace('@s.whatsapp.net', '')
+function extractPhoneNumber(phoneNumberSource) {
+  // phoneNumberSource puede ser: remoteJidAlt, participant, o from
+  
+  if (!phoneNumberSource) {
+    return 'Número no disponible'
   }
   
-  // Prioridad 2: Si hay participant (mensajes de grupo)
-  if (participant && participant.includes('@s.whatsapp.net')) {
-    return participant.replace('@s.whatsapp.net', '')
+  // Caso 1: Número normal (573044356143@s.whatsapp.net)
+  if (phoneNumberSource.includes('@s.whatsapp.net')) {
+    return phoneNumberSource.replace('@s.whatsapp.net', '')
   }
   
-  // Prioridad 3: Si tiene @lid (LinkedIn ID), intentar extraer del from
-  if (from.includes('@lid')) {
-    // El from en grupos suele ser: numero@g.us o similar
-    // El participant tiene el número real
-    if (participant) {
-      return participant.replace('@s.whatsapp.net', '').replace('@lid', '')
-    }
+  // Caso 2: LID format (124614650908926@lid) - no es útil
+  if (phoneNumberSource.includes('@lid')) {
+    return 'Número encriptado (WhatsApp LID)'
   }
   
-  // Fallback: devolver lo que sea, limpiando sufijos conocidos
-  return from.replace('@s.whatsapp.net', '').replace('@g.us', '').replace('@lid', '')
+  // Caso 3: Grupo (@g.us)
+  if (phoneNumberSource.includes('@g.us')) {
+    return phoneNumberSource.replace('@g.us', '')
+  }
+  
+  // Fallback: devolver limpio
+  return phoneNumberSource.replace(/@.*$/, '')
 }
 
 function calculateTypingDelay(text) {
@@ -221,14 +223,15 @@ async function startBot() {
     if (!msg?.message || msg.key.fromMe) return
 
     const from = msg.key.remoteJid
-    const phoneNumber = msg.key.participant || from // Obtener número real del participante
+    // ✅ PRIORIDAD: Usar remoteJidAlt si existe (número real), sino usar participant o from
+    const phoneNumber = msg.key.remoteJidAlt || msg.key.participant || from
     
     // DEBUG: Ver información del mensaje para diagnosticar número
     console.log('\n========== DEBUG NÚMERO ==========')
     console.log('from (remoteJid):', from)
+    console.log('remoteJidAlt:', msg.key.remoteJidAlt)
     console.log('participant:', msg.key.participant)
     console.log('phoneNumber (calculado):', phoneNumber)
-    console.log('msg.key completo:', JSON.stringify(msg.key, null, 2))
     console.log('==================================\n')
     
     // ✅ Marcar mensaje como leído (doble check azul) si NO está en modo humano
@@ -1490,8 +1493,8 @@ async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
 
   humanChats.add(from)
   
-  // Extraer número real del paciente
-  const realPhoneNumber = extractPhoneNumber(from, phoneNumber)
+  // Extraer número real del paciente (phoneNumber ya viene con remoteJidAlt priorizado)
+  const realPhoneNumber = extractPhoneNumber(phoneNumber)
 
   try {
     const summaryResponse = await openai.chat.completions.create({
