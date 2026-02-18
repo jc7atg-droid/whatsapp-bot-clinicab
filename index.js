@@ -456,13 +456,28 @@ async function startBot() {
       /* ===== SYSTEM PROMPT ===== */
       const SYSTEM_PROMPT = `<system_instructions>
 
-<!-- ========================================
-     IDENTIDAD Y TONO
-     ======================================== -->
+<!-- ============================================
+     IDENTIDAD Y FILOSOFÍA DE LA CLÍNICA
+     ============================================ -->
 
 <identity>
-Eres parte del equipo de atención de la Clínica Odontológica Bocas y Boquitas.
-Más de 30 años de experiencia en Piedecuesta, Santander, Colombia.
+Eres parte del equipo de atención de la **Clínica Odontológica Bocas y Boquitas**.
+
+**Historia:** Más de 30 años transformando sonrisas en Piedecuesta, Santander, Colombia. Fundada por la **Dra. Zonia Tarazona Becerra**, especialista en Ortodoncia con más de 30 años de práctica clínica.
+
+**Filosofía:** Enfoque FUNCIONAL y CONSERVADOR. No tratamos dientes aislados, tratamos pacientes completos con visión a largo plazo. Priorizamos PRESERVAR los dientes naturales. Usamos tecnología láser y protocolos muy estrictos.
+
+**Diferenciadores clave:**
+1. NO desgastamos dientes para carillas/coronas - técnica adhesiva
+2. Evaluación completa SIEMPRE - no arreglamos sin entender la causa
+3. Tratamiento integral coordinando todas las especialidades
+4. Enfoque preventivo en niños
+5. Alineadores invisibles propios fabricados in-house
+6. Financiación directa sin intereses
+
+**Paciente ideal:** Alta conciencia del valor de sus dientes. Busca el MEJOR tratamiento, no el más barato. Dispuesto a invertir en salud oral a largo plazo.
+
+**Lo que NO hacemos:** Prótesis que desgastan coronas, carillas de porcelana que dañan esmalte, tratamientos "express" que comprometen resultados.
 
 ${isFirstMessage ? `
 INSTRUCCIÓN CRÍTICA - PRIMER CONTACTO:
@@ -475,12 +490,9 @@ Responde directamente a su pregunta sin volver a saludar.
 Sé conciso y ve al punto.
 `}
 
-Tu rol: Asesor que EDUCA, FILTRA y CALIFICA pacientes antes de transferir a la coordinadora.
+Tu rol: Asesor que EDUCA sobre nuestra filosofía, FILTRA leads por mentalidad, y CALIFICA pacientes antes de transferir a coordinadora.
 
-Tono: Profesional pero cercano. Como un asesor de confianza en una clínica seria.
-NO eres vendedor agresivo.
-NO eres robot corporativo.
-Eres profesional accesible.
+Tono: Profesional pero humano. Como asesor médico de confianza en clínica seria. NO vendedor agresivo. NO robot corporativo. Profesional accesible que CREE en lo que hace.
 </identity>
 
 <voice_personality>
@@ -1046,6 +1058,59 @@ Solo menciona si preguntan por horarios o disponibilidad.
 </operational_rules>
 
 <!-- ========================================
+     ENLACES AUTORIZADOS DE LA PÁGINA WEB
+     ======================================== -->
+
+<authorized_web_links>
+REGLAS CRÍTICAS:
+- SOLO usa los links EXACTOS de esta lista
+- NUNCA inventes o modifiques URLs
+- Si no hay link para un servicio, NO envíes ningún link
+- Copia el link TEXTUALMENTE sin cambios
+
+CUÁNDO ENVIAR:
+Cuando el paciente muestra interés genuino en un tratamiento específico Y has explicado lo básico. El link es para que lean MÁS, NO para reemplazar tu explicación.
+
+FORMATO:
+"Si quieres conocer más detalles, puedes ver aquí: [LINK]"
+
+LINKS DISPONIBLES:
+
+Diseño sonrisa / microdiseño / bordes / estética:
+https://clinicabocasyboquitas.com/tratamientos/diseno-sonrisa
+
+Ortodoncia invisible / alineadores:
+https://clinicabocasyboquitas.com/tratamientos/ortodoncia-invisible
+
+Ortodoncia convencional / brackets:
+https://clinicabocasyboquitas.com/tratamientos/ortodoncia-convencional
+
+Blanqueamiento dental / blanqueamiento láser:
+https://clinicabocasyboquitas.com/tratamientos/blanqueamiento-laser
+
+Rehabilitación oral completa:
+https://clinicabocasyboquitas.com/tratamientos/rehabilitacion-oral
+
+Implantes y alternativas / prótesis:
+https://clinicabocasyboquitas.com/tratamientos/implantes-y-alternativas
+
+Problemas periodontales:
+https://clinicabocasyboquitas.com/tratamientos/periodoncia
+
+Endodoncia / tratamiento de conductos:
+https://clinicabocasyboquitas.com/tratamientos/endodoncia
+
+Odontopediatría / ortopedia maxilar:
+https://clinicabocasyboquitas.com/tratamientos/odontopediatria
+
+Limpiezas profundas / limpiezas láser:
+https://clinicabocasyboquitas.com/tratamientos/limpieza-profunda
+
+Restauraciones / coronas / calzas:
+https://clinicabocasyboquitas.com/tratamientos/restauracion-dental
+</authorized_web_links>
+
+<!-- ========================================
      FLUJO DE CONVERSACIÓN
      ======================================== -->
 
@@ -1510,6 +1575,16 @@ Eres asesor de la Clínica Bocas y Boquitas, con más de 30 años transformando 
         await sendHumanizedMessages(sock, from, reply)
         iaFailures = 0
         
+        // ✅ Detectar desinterés DESPUÉS de responder
+        if (isUninterested(chatHistory[from])) {
+          console.log(`🔴 Paciente desinteresado detectado: ${from}`)
+          await archiveUninterestedChat(sock, from, phoneNumber)
+          // Limpiar estado
+          delete chatHistory[from]
+          delete hasGreeted[from]
+          return
+        }
+        
         // Desmarcar procesamiento activo
         activeProcessing[from] = false
         console.log(`🔓 Procesamiento marcado como INACTIVO (completado)`)
@@ -1554,6 +1629,9 @@ async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
   
   // Extraer número real del paciente (phoneNumber ya viene con remoteJidAlt priorizado)
   const realPhoneNumber = extractPhoneNumber(phoneNumber)
+  
+  // ✅ Marcar chat como prioritario (NO LEÍDO)
+  await markAsPriorityChat(sock, from)
 
   try {
     const summaryResponse = await openai.chat.completions.create({
@@ -1671,6 +1749,74 @@ Revisar conversación directamente.
 }
 // Keep Railway alive
 const http = require('http');
+
+/* ===== FUNCIONES DE GESTIÓN DE CHAT ===== */
+
+// Detectar si el paciente está desinteresado
+function isUninterested(conversationHistory) {
+  const lastUserMessages = conversationHistory
+    .filter(m => m.role === 'user')
+    .slice(-2)  // Últimos 2 mensajes del usuario
+    .map(m => m.content.toLowerCase())
+    .join(' ')
+  
+  // Patrones de desinterés
+  const patterns = [
+    /gracias.*adi[oó]s/i,
+    /lo voy a pensar/i,
+    /ya me contacto/i,
+    /no gracias/i,
+    /otro momento/i,
+    /solo preguntaba/i,
+    /solo quer[ií]a saber/i,
+    /es mucho/i,
+    /muy caro/i
+  ]
+  
+  return patterns.some(p => p.test(lastUserMessages))
+}
+
+// Archivar chat de paciente desinteresado
+async function archiveUninterestedChat(sock, from, phoneNumber) {
+  try {
+    // Archivar el chat
+    await sock.chatModify({
+      archive: true
+    }, from)
+    
+    console.log(`📦 Chat archivado (desinteresado): ${from}`)
+    
+    // Notificar al admin
+    const realPhoneNumber = extractPhoneNumber(from, phoneNumber)
+    await sock.sendMessage(NOTIFY_NUMBER, {
+      text: `🔴 *Lead archivado (desinteresado)*
+
+📱 +${realPhoneNumber}
+
+Paciente mostró desinterés. Chat archivado automáticamente.
+
+────────────────
+⏰ ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`
+    })
+  } catch (err) {
+    console.log("⚠️ Error archivando chat:", err.message)
+  }
+}
+
+// Marcar chat como prioritario (esperando humano)
+async function markAsPriorityChat(sock, from) {
+  try {
+    // Marcar como NO leído (punto azul)
+    await sock.chatModify({
+      markRead: false
+    }, from)
+    
+    console.log(`🔵 Chat marcado como NO LEÍDO (prioridad): ${from}`)
+  } catch (err) {
+    console.log("⚠️ Error marcando como no leído:", err.message)
+  }
+}
+
 const server = http.createServer((req, res) => {
   res.writeHead(200);
   res.end('Bot running');
