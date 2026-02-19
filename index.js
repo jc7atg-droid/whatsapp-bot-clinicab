@@ -405,9 +405,14 @@ async function startBot() {
 
     if (!text) return
     
-    // Continuar con el procesamiento normal del mensaje
-    
-    if (humanChats.has(from)) return
+    // Si el chat ya fue transferido a humano, responder mensaje automático
+    if (humanChats.has(from)) {
+      console.log(`👤 Chat ya transferido a humano: ${from}`)
+      await sock.sendMessage(from, {
+        text: "Ya te hemos comunicado con nuestra coordinadora. Ella te responderá pronto 😊"
+      })
+      return
+    }
 
     /* ===== BUFFER MEJORADO CON LOCK ===== */
     
@@ -501,7 +506,7 @@ async function startBot() {
 const SYSTEM_PROMPT = `<identity>
 Clínica Bocas y Boquitas - Piedecuesta. 30+ años. Dra. Zonia Tarazona (Ortodoncista).
 
-${isFirstMessage ? `PRIMER MENSAJE: "Bienvenido a la Clínica Bocas y Boquitas 😊 ¿En qué puedo ayudarte?"` : `NO es primer mensaje: Ve directo, NO repitas saludo`}
+${isFirstMessage ? `PRIMER MENSAJE: Siempre inicia con "Bienvenido a la Clínica Bocas y Boquitas 😊 ¿En qué puedo ayudarte?"` : `NO es primer mensaje: Ve directo, NO repitas saludo`}
 
 Rol: Asesor natural que informa bien, destaca lo que nos hace diferentes, y consigue nombre antes de transferir.
 
@@ -553,6 +558,18 @@ NO HAGAS:
 </response_structure>
 
 <pricing_quick>
+**CRÍTICO - LÓGICA DE EVALUACIONES:**
+
+¿Mencionó ORTODONCIA? → Evaluación $100k (cubre TODO: ortodoncia + calzas + diseño + lo que sea)
+¿NO mencionó ortodoncia? → Evaluación $80k (para calzas, diseño, rehab, implantes)
+¿Blanqueamiento/limpieza/endodoncia/cordales/extracciones? → SIN evaluación, agenda directo
+
+EJEMPLOS:
+"ortodoncia y calzas" → $100k (mencionó ortodoncia)
+"solo calzas" → $80k (NO mencionó ortodoncia)
+"calza y limpieza" → $80k para calza + limpieza agenda directo
+"blanqueamiento" → Directo sin evaluación
+
 SIN eval (directo): Blanqueamiento, limpieza, endodoncia, cordales, extracciones
 CON eval $100k: Ortodoncia (cubre TODO)
 CON eval $80k: Diseño, calzas, rehab (sin ortodoncia)
@@ -563,11 +580,13 @@ Link: https://clinicabocasyboquitas.com/tratamientos/blanqueamiento-laser
 
 ORTODONCIA (eval $100k):
 Alineadores: $8M-$20M | Brackets: $1M-$1.5M | Tratamiento: $3.5M-$5.5M
+"Si quieres ver por qué somos diferentes y casos reales: [link]"
 Links: https://clinicabocasyboquitas.com/tratamientos/ortodoncia-invisible
 https://clinicabocasyboquitas.com/tratamientos/ortodoncia-convencional
 
 DISEÑO SONRISA (eval $80k):
 Carilla: $1M | Corona: $2M
+"Conoce nuestra filosofía conservadora y casos antes/después: [link]"
 Link: https://clinicabocasyboquitas.com/tratamientos/diseno-sonrisa
 
 LIMPIEZA (directo):
@@ -576,6 +595,7 @@ Link: https://clinicabocasyboquitas.com/tratamientos/limpieza-profunda
 
 CALZAS (eval $80k):
 Pequeña: $250k | Mediana: $300k | Grande: $350k
+"Si quieres conocer más sobre cómo trabajamos y por qué nadie lo hace igual: [link]"
 Link: https://clinicabocasyboquitas.com/tratamientos/restauracion-dental
 
 IMPLANTES (eval al momento):
@@ -847,7 +867,7 @@ Llamar para explicar proceso de ortodoncia invisible, enviar casos antes/despué
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: +${realPhoneNumber}
+📱 wa.me/${realPhoneNumber}
 
 ${summary}
 
@@ -869,7 +889,7 @@ ${summary}
       text:
 `🦷 *NUEVO PACIENTE REQUIERE ATENCIÓN*
 
-📱 Número: +${realPhoneNumber}
+📱 wa.me/${realPhoneNumber}
 
 ⚠️ Error generando resumen automático.
 Revisar conversación directamente.
@@ -920,41 +940,47 @@ function isUninterested(conversationHistory) {
 // Archivar chat de paciente desinteresado
 async function archiveUninterestedChat(sock, from, phoneNumber) {
   try {
-    // Archivar el chat
-    await sock.chatModify({
-      archive: true
-    }, from)
+    console.log(`🔴 Intentando archivar chat: ${from}`)
     
-    console.log(`📦 Chat archivado (desinteresado): ${from}`)
+    // Método 1: Archivar directamente
+    await sock.chatModify({ archive: true }, from)
     
-    // Notificar al admin
-    const realPhoneNumber = extractPhoneNumber(from, phoneNumber)
+    console.log(`📦 Chat archivado exitosamente: ${from}`)
+    
+    // Extraer número real (phoneNumber ya viene con @s.whatsapp.net)
+    const realPhoneNumber = phoneNumber.replace('@s.whatsapp.net', '')
+    
+    // Notificar al admin con link wa.me
     await sock.sendMessage(NOTIFY_NUMBER, {
       text: `🔴 *Lead archivado (desinteresado)*
 
-📱 +${realPhoneNumber}
+📱 wa.me/${realPhoneNumber}
 
 Paciente mostró desinterés. Chat archivado automáticamente.
 
 ────────────────
 ⏰ ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`
     })
+    
+    console.log(`✅ Notificación enviada al admin`)
   } catch (err) {
-    console.log("⚠️ Error archivando chat:", err.message)
+    console.error("⚠️ Error archivando chat:", err)
+    console.error("Error completo:", JSON.stringify(err, null, 2))
   }
 }
 
 // Marcar chat como prioritario (esperando humano)
 async function markAsPriorityChat(sock, from) {
   try {
-    // Marcar como NO leído (punto azul)
-    await sock.chatModify({
-      markRead: false
-    }, from)
+    console.log(`🔵 Intentando marcar como NO LEÍDO: ${from}`)
     
-    console.log(`🔵 Chat marcado como NO LEÍDO (prioridad): ${from}`)
+    // Marcar como NO leído (punto azul)
+    await sock.chatModify({ markRead: false }, from)
+    
+    console.log(`✅ Chat marcado como NO LEÍDO exitosamente: ${from}`)
   } catch (err) {
-    console.log("⚠️ Error marcando como no leído:", err.message)
+    console.error("⚠️ Error marcando como no leído:", err)
+    console.error("Error completo:", JSON.stringify(err, null, 2))
   }
 }
 
