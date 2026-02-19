@@ -205,10 +205,21 @@ async function startBot() {
 
   const { state, saveCreds } = await useMultiFileAuthState("./auth")
   
+  // Logger compatible con Baileys (debe tener método .child())
+  const logger = {
+    level: 'error',
+    fatal: (...args) => console.error('[FATAL]', ...args),
+    error: (...args) => console.error('[ERROR]', ...args),
+    warn: (...args) => {}, // Silenciar warnings
+    info: (...args) => {}, // Silenciar info
+    debug: (...args) => {}, // Silenciar debug
+    trace: (...args) => {}, // Silenciar trace
+    child: () => logger // Retornar el mismo logger
+  }
+  
   // Configuración para Multi-Device (experimental)
   const sock = makeWASocket({ 
     auth: state,
-    printQRInTerminal: true,
     browser: ['Clínica Bocas y Boquitas Bot', 'Chrome', '120.0.0'],
     syncFullHistory: false,  // No sincronizar todo el historial (más rápido)
     markOnlineOnConnect: false,  // No aparecer como "online"
@@ -216,10 +227,7 @@ async function startBot() {
     // Configuración para mejor estabilidad
     keepAliveIntervalMs: 30000,  // Keep-alive cada 30 segundos
     connectTimeoutMs: 60000,  // Timeout de conexión 60 segundos
-    logger: {
-      level: 'error',  // Solo mostrar errores (menos spam en logs)
-      log: (...args) => console.log('[WA]', ...args)
-    }
+    logger: logger  // Logger compatible
   })
 
   sock.ev.on("creds.update", saveCreds)  // ⚠️ COMENTAR ESTA LÍNEA SI QUIERES PROBAR SIN PERSISTENCIA
