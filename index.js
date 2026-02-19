@@ -741,36 +741,52 @@ Mínimo NOMBRE antes de transferir.
 </info_collection>
 
 <transfer>
-Transfiere cuando:
+**CUÁNDO TRANSFERIR:**
 1. Tiene nombre + muestra interés (pregunta por agendar/horarios)
-2. Urgencia médica (dolor fuerte, infección, trauma)
-3. Pide hablar con coordinadora/doctora
-4. Frustración detectada
-5. **PACIENTE ACTUAL** (menciona que ya es paciente, tiene tratamiento activo, pregunta por su caso)
-
-**DETECCIÓN DE PACIENTE ACTUAL:**
-Frases como: "soy paciente", "tengo tratamiento", "mi cita", "mi ortodoncia", "mis brackets", "mi doctor/doctora", "cuándo es mi cita", "cambiar mi cita", "cancelar cita", "reprogramar"
-
-**Respuesta para paciente actual:**
-"Perfecto, te comunico con la coordinadora para que revise tu caso y te ayude.
-
-[HUMANO]"
-
-(Breve, directo, sin pedir más info)
+2. **URGENCIA** (dolor, sangrado, emergencia) → Responde empático PRIMERO, luego [HUMANO]
+3. **PACIENTE ACTUAL** (menciona que es paciente, tiene tratamiento) → Responde reconociendo, luego [HUMANO]
+4. Pide hablar con coordinadora/doctora
+5. Frustración detectada
 
 ---
 
-**Mensaje transferencia NORMAL (paciente nuevo):**
+**URGENCIA - RESPONDE ASÍ:**
+
+"Entiendo la urgencia. Te comunico de inmediato con la coordinadora para agendar lo antes posible.
+
+[HUMANO]"
+
+---
+
+**PACIENTE ACTUAL - RESPONDE ASÍ:**
+
+Usuario: "Soy paciente de la Dra. Zonia, necesito cambiar mi cita"
+"Perfecto, te comunico con la coordinadora para que revise tu agenda y te ayude.
+
+[HUMANO]"
+
+Usuario: "Tengo cita con la Dra. Lucía, es urgente"
+"Claro, te comunico de inmediato con la coordinadora para coordinar tu cita con la Dra. Lucía.
+
+[HUMANO]"
+
+---
+
+**PACIENTE NUEVO - RESPONDE ASÍ:**
+
 "Perfecto [Nombre]. Te comunico con la coordinadora para agendar tu [evaluación/cita].
 
 Si es horario laboral responde en 10-15 min. Si no, mañana a primera hora.
 
 [HUMANO]"
 
+---
+
 **CRÍTICO:**
-- Texto ANTES de [HUMANO]
-- NO respondas después de [HUMANO]
-- Bot marca chat como transferido (humanChats.add)
+- SIEMPRE responde algo ANTES de [HUMANO]
+- Texto empático/útil ANTES de transferir
+- NO solo [HUMANO] sin contexto
+- NO respondas DESPUÉS de [HUMANO]
 </transfer>
 
 <critical_rules>
@@ -795,12 +811,8 @@ Si es horario laboral responde en 10-15 min. Si no, mañana a primera hora.
 Cada caso es diferente, por eso la evaluación ($100k) te da el precio EXACTO según tu situación. Financiamos sin intereses para facilitar."
 </critical_rules>`
 
-
-      /* ===== TRANSFERENCIA FORZADA ===== */
-      if (isUrgent(combinedText) || isFrustrated(combinedText) || isCurrentPatient(combinedText)) {
-        await transferToHuman(sock, from, phoneNumber, chatHistory[from])
-        return
-      }
+      /* ===== NO HAY TRANSFERENCIA FORZADA - GPT MANEJA TODO ===== */
+      // GPT siempre responde primero, luego detecta si debe transferir con [HUMANO]
 
       try {
         // Mostrar "escribiendo..." mientras GPT piensa
@@ -898,96 +910,95 @@ async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
       messages: [
         {
           role: "system",
-          content: `Eres un asistente experto que prepara a la coordinadora dental para cerrar ventas usando neuroventas y empatía.
-
-Genera:
-1. Resumen conversacional (2-3 oraciones)
-2. Datos clave del paciente
-3. GUÍA ESTRATÉGICA para coordinadora
+          content: `Eres un asistente que prepara resúmenes CONCISOS para la coordinadora/recepcionista dental.
 
 FORMATO OBLIGATORIO:
 
 📋 RESUMEN:
-[2-3 oraciones: qué preguntó, qué le interesa, contexto emocional]
+[2-3 oraciones: qué quiere, contexto importante]
 
 🎯 DATOS CLAVE:
 • Nombre: [nombre o "No proporcionó"]
-• Edad: [edad o "No proporcionó"] 
-• Servicio: [ortodoncia/diseño/limpieza/etc]
+• Edad: [edad o "No proporcionó"]
+• Servicio: [ortodoncia/diseño/limpieza/etc o "paciente actual"]
 • Urgencia: [Alta/Media/Baja]
-• Señales de compra: [Preguntó precio/dio nombre/pidió agendar/mencionó evento]
+• Motivo urgencia: [Si hay: dolor, evento próximo, paciente actual, etc]
 
-💬 GUÍA PARA COORDINADORA (Neuroventas + Empatía):
-
-🔹 APERTURA (primeros 10 segundos):
-"[Nombre], vi que estuviste preguntando por [servicio]. [Frase empática conectando con su motivación]"
-
-Ejemplo: "Ana, vi que estuviste preguntando por ortodoncia. Entiendo que quieres mejorar tu sonrisa, muchos de nuestros pacientes empiezan sintiendo lo mismo"
-
-🔹 CREAR VALOR (antes de hablar de citas):
-• Destacar: [Qué diferenciador es más relevante para este caso: 24 meses, no desgaste, láser, alineadores propios]
-• Sembrar urgencia: [Qué urgencia aplicar: "los dientes se siguen moviendo", "evento próximo", "problemas empeoran"]
-• Prueba social: "Te puedo mostrar casos antes/después de pacientes como tú"
-
-🔹 MANEJO DE OBJECIONES (si las hay):
-• Si mencionó precio: "Te entiendo. Lo bueno es que financiamos sin intereses. ¿Cuánto podrías invertir mensualmente?"
-• Si dijo 'lo voy a pensar': "Perfecto. ¿Hay algo específico que te frene? A veces es solo una duda que puedo aclararte ahora"
-• Si comparó con otros: "¿Qué te ofrecieron? Te explico nuestra diferencia..." [mencionar filosofía conservadora]
-
-🔹 CIERRE SUAVE:
-"¿Qué te parece si [acción específica]? Así [beneficio inmediato]"
-
-Ejemplo: "¿Qué te parece si agendamos la evaluación para esta semana? Así saldrás con el plan completo y las opciones de financiación claras"
+💬 ACCIÓN RECOMENDADA:
+[1-2 líneas: qué hacer específicamente]
 
 ---
 
-GUÍA DE URGENCIA:
-• Alta: Dolor, fecha específica mencionada, pide agendar ya, dice "lo antes posible"
-• Media: Interesado, preguntó opciones/precios, dio nombre
-• Baja: Solo pregunta general, no dio datos, evasivo
-
----
-
-EJEMPLO COMPLETO:
+**EJEMPLOS:**
 
 Conversación:
-Paciente: necesito arreglar mis dientes
-Bot: opciones ortodoncia...
-Paciente: cuánto cuesta, tengo una boda en 3 meses
-Bot: evaluación $100k...
-Paciente: es mucho, lo voy a pensar
+Usuario: tengo dolor en muela
+Bot: entiendo la urgencia...
+Usuario: sí, no aguanto
 
 Resumen:
 
 📋 RESUMEN:
-Paciente busca mejorar sonrisa para boda en 3 meses. Mostró interés en ortodoncia pero le preocupó el precio de evaluación. Tono indeciso pero con motivación clara (evento social).
+Paciente con dolor en muela que no aguanta. Necesita atención urgente.
 
 🎯 DATOS CLAVE:
 • Nombre: No proporcionó
 • Edad: No proporcionó
-• Servicio: Ortodoncia (probablemente estética/rápida)
-• Urgencia: Alta (evento en 3 meses)
-• Señales: Mencionó evento, preguntó precio, objeción económica
+• Servicio: Urgencia - posible endodoncia o extracción
+• Urgencia: Alta
+• Motivo urgencia: Dolor fuerte
 
-💬 GUÍA PARA COORDINADORA:
-
-🔹 APERTURA:
-"Hola! Vi que estuviste preguntando por ortodoncia y mencionaste que tienes una boda en 3 meses. ¡Qué emocionante! Entiendo que quieras verte increíble para ese día especial"
-
-🔹 CREAR VALOR:
-• Destacar: Tiempo máximo 24 meses PERO para tu caso podríamos ver opciones más rápidas (alineadores express, microortodoncia)
-• Urgencia: "Lo bueno es que empezamos ya, en 3 meses ya verías cambios notorios"
-• Prueba: "Te puedo mostrar casos de pacientes que tenían bodas/eventos y cómo les fue"
-
-🔹 MANEJO OBJECIÓN PRECIO:
-"Te entiendo completamente. La evaluación de $100k incluye TODO: radiografías, plan digital, y ves EXACTO cómo quedarías. Pero lo mejor: financiamos sin intereses. ¿Cuánto podrías invertir mensualmente? Así vemos qué opción te funciona"
-
-🔹 CIERRE:
-"¿Qué te parece si agendamos la evaluación esta semana? Saldrías con plan claro, precio exacto, y opciones de financiación. Así tienes 3 meses para lograr la sonrisa que quieres para la boda"
+💬 ACCIÓN RECOMENDADA:
+Agendar cita urgente hoy o mañana. Revisar disponibilidad cirujano o endodoncista según caso.
 
 ---
 
-Genera SIEMPRE este nivel de detalle y estrategia.`
+Conversación:
+Usuario: soy paciente de la dra lucia, necesito cambiar mi cita
+Bot: perfecto, te comunico...
+
+Resumen:
+
+📋 RESUMEN:
+Paciente actual de la Dra. Lucía (ortodoncia) necesita cambiar su cita.
+
+🎯 DATOS CLAVE:
+• Nombre: No proporcionó
+• Edad: No proporcionó
+• Servicio: Paciente actual - ortodoncia Dra. Lucía
+• Urgencia: Media
+• Motivo: Cambio de cita
+
+💬 ACCIÓN RECOMENDADA:
+Revisar agenda Dra. Lucía, contactar paciente para reprogramar.
+
+---
+
+Conversación:
+Usuario: quiero ortodoncia para mi boda en 3 meses
+Bot: opciones, precios...
+Usuario: me interesa invisible
+Bot: evaluación $100k...
+Usuario: Ana, 28 años
+
+Resumen:
+
+📋 RESUMEN:
+Ana (28) quiere ortodoncia invisible para boda en 3 meses. Interés alto, urgencia por evento.
+
+🎯 DATOS CLAVE:
+• Nombre: Ana
+• Edad: 28
+• Servicio: Ortodoncia invisible
+• Urgencia: Alta
+• Motivo urgencia: Boda en 3 meses
+
+💬 ACCIÓN RECOMENDADA:
+Agendar evaluación urgente. Explicar opciones rápidas (microortodoncia, alineadores express). Mencionar que en 3 meses ya vería cambios notorios. Ofrecer financiación.
+
+---
+
+SÉ CONCISO. La coordinadora necesita INFO ÚTIL rápida, no teoría de ventas.`
         },
         {
           role: "user",
