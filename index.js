@@ -407,28 +407,10 @@ async function startBot() {
 
     if (!text) return
     
-    // Si el chat está en lista de desinteresados, ignorar completamente
-    if (uninterestedChats.has(from)) {
-      console.log(`❄️ Chat desinteresado ignorado: ${from}`)
-      return // NO responder, NO marcar como leído
-    }
-    
-    // Si el chat ya fue transferido a humano, responder UNA VEZ y luego ignorar
+    // Si el chat ya fue transferido a humano, IGNORAR COMPLETAMENTE (no responder, no marcar leído)
     if (humanChats.has(from)) {
-      console.log(`👤 Chat ya transferido a humano: ${from}`)
-      
-      // Solo responder si NO ha sido notificado antes
-      if (!alreadyNotified.has(from)) {
-        await sock.sendMessage(from, {
-          text: "Ya te hemos comunicado con nuestra coordinadora. Ella te responderá pronto 😊"
-        })
-        alreadyNotified.add(from) // Marcar como notificado
-        console.log(`✅ Mensaje automático enviado (primera vez)`)
-      } else {
-        console.log(`🔕 Ya fue notificado antes, ignorando`)
-      }
-      
-      return
+      console.log(`👤 Chat transferido - IGNORANDO completamente (no responde, no marca leído)`)
+      return // Sale inmediatamente, no procesa nada
     }
 
     /* ===== BUFFER MEJORADO CON LOCK ===== */
@@ -756,17 +738,6 @@ CRÍTICO: Texto ANTES de [HUMANO]. NO respondas después.
         // Enviar respuesta de forma humanizada con delays
         await sendHumanizedMessages(sock, from, reply)
         iaFailures = 0
-        
-        // ✅ Detectar desinterés DESPUÉS de responder
-        if (isUninterested(chatHistory[from])) {
-          console.log(`🔴 Paciente desinteresado detectado: ${from}`)
-          console.log(`📋 Historial: ${JSON.stringify(chatHistory[from].slice(-2))}`)
-          await handleUninterestedChat(sock, from, phoneNumber)
-          // Limpiar estado
-          delete chatHistory[from]
-          delete hasGreeted[from]
-          return
-        }
         
         // Desmarcar procesamiento activo
         activeProcessing[from] = false
