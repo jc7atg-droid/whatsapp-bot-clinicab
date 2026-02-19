@@ -30,15 +30,19 @@ let dailyCount = 0
 let lastDay = new Date().toDateString()
 let iaFailures = 0
 
+// NOTA: Estos datos se reinician en cada deploy, pero:
+// - La SESIÓN de WhatsApp (auth/) SÍ persiste
+// - Los chats se gestionan mensaje a mensaje
+// - humanChats y hasGreeted se limpian al transferir
 const buffers = {}
 const timers = {}
-const chatHistory = {}
-const humanChats = new Set()
-const uninterestedChats = new Set() // Chats que mostraron desinterés
-const alreadyNotified = new Set() // Chats que ya recibieron mensaje automático post-transferencia
-const hasGreeted = {}
-const processingLocks = {} // Locks para evitar procesamiento simultáneo
-const activeProcessing = {} // Flag para saber si hay procesamiento activo (esperando GPT)
+const chatHistory = {}  // Historial de conversación por chat
+const humanChats = new Set()  // Chats transferidos a humano
+const uninterestedChats = new Set()  // Chats desinteresados (no se usa actualmente)
+const alreadyNotified = new Set()  // Chats notificados post-transferencia
+const hasGreeted = {}  // Control de saludo inicial por chat
+const processingLocks = {}  // Locks para evitar procesamiento simultáneo
+const activeProcessing = {}  // Flag de procesamiento activo
 
 /* ================= UTILS ================= */
 
@@ -273,8 +277,8 @@ async function startBot() {
     logger: logger  // Logger compatible
   })
 
-  sock.ev.on("creds.update", saveCreds)  // ⚠️ COMENTAR ESTA LÍNEA SI QUIERES PROBAR SIN PERSISTENCIA
-  // sock.ev.on("creds.update", () => {})  // ✅ DESCOMENTAR PARA NO GUARDAR SESIÓN
+  sock.ev.on("creds.update", saveCreds)  // ✅ ACTIVO: Guarda sesión automáticamente (persiste entre reinicios)
+  // sock.ev.on("creds.update", () => {})  // ⚠️ DESCOMENTAR solo para testing (NO guarda sesión)
 
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
     if (qr) {
@@ -544,9 +548,11 @@ async function startBot() {
 
 /* ===== SYSTEM PROMPT - CONVERSACIONAL Y NATURAL ===== */
 const SYSTEM_PROMPT = `<identity>
+**SOY SOFIA** - Asistente virtual de la Clínica Bocas y Boquitas.
+
 Clínica Bocas y Boquitas - Piedecuesta, Santander. 30+ años. 
 
-${isFirstMessage ? `PRIMER MENSAJE: Siempre inicia con "Bienvenido a la Clínica Bocas y Boquitas 😊 ¿En qué puedo ayudarte?"` : `NO es primer mensaje: Ve directo, NO repitas saludo`}
+${isFirstMessage ? `PRIMER MENSAJE: Siempre inicia con "¡Hola! Soy Sofía, asistente virtual de la Clínica Bocas y Boquitas 😊 ¿En qué puedo ayudarte?"` : `NO es primer mensaje: Ve directo, NO repitas presentación`}
 
 **EQUIPO DE ESPECIALISTAS (conoce PERFECTAMENTE):**
 
