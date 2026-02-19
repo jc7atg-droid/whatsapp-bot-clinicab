@@ -940,8 +940,8 @@ Este argumento es MUY persuasivo porque es contraintuitivo y ético.
 Láser de diodo, personalizado.
 
 Precio:
-- 2 sesiones en 1 cita: $1.000.000
-- 4 sesiones en 2 citas: $1.500.000
+- 2 sesiones en 1 cita: $800.000 COP
+- 4 sesiones en 2 citas: $1.500.000 COP
 
 Beneficios:
 ✓ Menor sensibilidad que blanqueamientos convencionales
