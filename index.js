@@ -94,11 +94,21 @@ function extractPhoneNumber(phoneNumberSource) {
 
 function calculateTypingDelay(text) {
   const words = text.trim().split(/\s+/).length
-  const baseDelay = 1000 // 1 segundo base
-  const perWord = 120    // 120ms por palabra (velocidad humana de escritura)
+  const chars = text.length
+  
+  // Humanos escriben más rápido cuando es texto corto, más lento cuando es largo
+  let baseDelay = 800 // Base más corto
+  let perWord = 100 + Math.random() * 40 // 100-140ms por palabra (variación)
+  
+  // Si el mensaje tiene muchos caracteres, aumentar un poco el delay
+  if (chars > 200) {
+    perWord = perWord * 1.2
+  }
+  
   const calculated = baseDelay + (words * perWord)
-  const maxDelay = 5000  // Máximo 5 segundos por mensaje
-  const minDelay = 1500  // Mínimo 1.5 segundos
+  const maxDelay = 4500  // Máximo 4.5 segundos (no aburrir)
+  const minDelay = 1200  // Mínimo 1.2 segundos
+  
   return Math.max(minDelay, Math.min(calculated, maxDelay))
 }
 
@@ -109,11 +119,13 @@ async function sendHumanizedMessages(sock, from, fullReply) {
   console.log(JSON.stringify(fullReply))
   console.log('=====================================\n')
   
-  // Detectar 2 o más saltos de línea (1+ línea en blanco) como separadores de mensaje
-  // \n\n = 1 línea en blanco → separar en mensaje distinto
-  const normalized = fullReply.replace(/\n\n+/g, '|||SPLIT|||')
+  // ✅ FIX: Convertir markdown ** a * (WhatsApp solo usa *)
+  let fixedReply = fullReply.replace(/\*\*/g, '*')
   
-  console.log('Después de normalizar:')
+  // Detectar 2 o más saltos de línea (1+ línea en blanco) como separadores de mensaje
+  const normalized = fixedReply.replace(/\n\n+/g, '|||SPLIT|||')
+  
+  console.log('Después de normalizar y fix markdown:')
   console.log(JSON.stringify(normalized))
   console.log('=====================================\n')
   
@@ -131,32 +143,56 @@ async function sendHumanizedMessages(sock, from, fullReply) {
   
   // Limitar a máximo 3 mensajes
   if (messages.length > 3) {
-    // Combinar los mensajes extras al final
     const firstTwo = messages.slice(0, 2)
     const remaining = messages.slice(2).join('\n\n')
     messages = [...firstTwo, remaining]
   }
   
-  // Si solo hay un mensaje, enviarlo normalmente con delay
+  // ✅ HUMANIZACIÓN MÁXIMA: Simular lectura del mensaje del usuario antes de responder
+  const userReadingTime = Math.random() * 1000 + 500 // 0.5-1.5 segundos "leyendo"
+  await sleep(userReadingTime)
+  
+  // Si solo hay un mensaje, enviarlo con timing natural
   if (messages.length === 1) {
     const delay = calculateTypingDelay(messages[0])
+    
+    // Simular pensamiento (no aparece "escribiendo" todavía)
+    const thinkTime = Math.random() * 1500 + 500 // 0.5-2 segundos pensando
+    await sleep(thinkTime)
+    
+    // Ahora sí "escribiendo..."
     await sock.sendPresenceUpdate('composing', from)
     await sleep(delay)
+    
+    // Enviar mensaje
     await sock.sendMessage(from, { text: messages[0] })
+    
+    // Quitar "escribiendo..."
     await sock.sendPresenceUpdate('paused', from)
     return
   }
   
-  // Si hay múltiples mensajes, enviarlos con delays progresivos
+  // Si hay múltiples mensajes, enviarlos con timing ultra natural
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i]
     const delay = calculateTypingDelay(message)
     
+    // Pequeña pausa pensando entre mensajes (solo después del primero)
+    if (i > 0) {
+      const betweenThinkTime = Math.random() * 800 + 400 // 0.4-1.2 seg
+      await sleep(betweenThinkTime)
+    } else {
+      // Primera respuesta: pensar un poco más
+      const firstThinkTime = Math.random() * 1500 + 500 // 0.5-2 seg
+      await sleep(firstThinkTime)
+    }
+    
     // Mostrar "escribiendo..."
     await sock.sendPresenceUpdate('composing', from)
     
-    // Esperar según cantidad de palabras
-    await sleep(delay)
+    // Esperar mientras "escribe" (con variación natural)
+    const naturalDelay = delay * (0.9 + Math.random() * 0.2) // ±10% variación
+    await sleep(naturalDelay)
     
     // Enviar mensaje
     await sock.sendMessage(from, { text: message })
@@ -164,9 +200,10 @@ async function sendHumanizedMessages(sock, from, fullReply) {
     // Quitar "escribiendo..."
     await sock.sendPresenceUpdate('paused', from)
     
-    // Pausa breve entre mensajes (800ms) para que se note la separación
+    // Pausa entre mensajes (más natural que fijo 800ms)
     if (i < messages.length - 1) {
-      await sleep(800)
+      const pauseBetween = Math.random() * 600 + 600 // 0.6-1.2 segundos
+      await sleep(pauseBetween)
     }
   }
 }
