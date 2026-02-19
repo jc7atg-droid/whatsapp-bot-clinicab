@@ -14,7 +14,7 @@ if (!OPENAI_API_KEY) {
   process.exit(1)
 }
 
-const NOTIFY_NUMBER = "573044356143@s.whatsapp.net"
+const NOTIFY_NUMBER = "573184991302@s.whatsapp.net"
 const BUFFER_TIME = 4000
 const MAX_DAILY_RESPONSES = 500
 
@@ -601,6 +601,9 @@ DIFERENCIADORES (menciónalos naturalmente):
 - Financiación directa sin intereses
 
 FILOSOFÍA: Conservadores, preservar dientes, tratamiento integral, evaluación siempre.
+
+**ATENCIÓN INTERNACIONAL:**
+Parte de nuestro equipo habla inglés perfectamente. Para garantizar comunicación fluida, también contamos con dispositivos de traducción en tiempo real si es necesario.
 </key_points>
 
 <response_structure>
