@@ -34,6 +34,8 @@ const buffers = {}
 const timers = {}
 const chatHistory = {}
 const humanChats = new Set()
+const uninterestedChats = new Set() // Chats que mostraron desinterés
+const alreadyNotified = new Set() // Chats que ya recibieron mensaje automático post-transferencia
 const hasGreeted = {}
 const processingLocks = {} // Locks para evitar procesamiento simultáneo
 const activeProcessing = {} // Flag para saber si hay procesamiento activo (esperando GPT)
@@ -405,12 +407,27 @@ async function startBot() {
 
     if (!text) return
     
-    // Si el chat ya fue transferido a humano, responder mensaje automático
+    // Si el chat está en lista de desinteresados, ignorar completamente
+    if (uninterestedChats.has(from)) {
+      console.log(`❄️ Chat desinteresado ignorado: ${from}`)
+      return // NO responder, NO marcar como leído
+    }
+    
+    // Si el chat ya fue transferido a humano, responder UNA VEZ y luego ignorar
     if (humanChats.has(from)) {
       console.log(`👤 Chat ya transferido a humano: ${from}`)
-      await sock.sendMessage(from, {
-        text: "Ya te hemos comunicado con nuestra coordinadora. Ella te responderá pronto 😊"
-      })
+      
+      // Solo responder si NO ha sido notificado antes
+      if (!alreadyNotified.has(from)) {
+        await sock.sendMessage(from, {
+          text: "Ya te hemos comunicado con nuestra coordinadora. Ella te responderá pronto 😊"
+        })
+        alreadyNotified.add(from) // Marcar como notificado
+        console.log(`✅ Mensaje automático enviado (primera vez)`)
+      } else {
+        console.log(`🔕 Ya fue notificado antes, ignorando`)
+      }
+      
       return
     }
 
@@ -558,21 +575,27 @@ NO HAGAS:
 </response_structure>
 
 <pricing_quick>
-**CRÍTICO - LÓGICA DE EVALUACIONES:**
+**CRÍTICO - LÓGICA DE EVALUACIONES (léelo SIEMPRE):**
 
-¿Mencionó ORTODONCIA? → Evaluación $100k (cubre TODO: ortodoncia + calzas + diseño + lo que sea)
-¿NO mencionó ortodoncia? → Evaluación $80k (para calzas, diseño, rehab, implantes)
-¿Blanqueamiento/limpieza/endodoncia/cordales/extracciones? → SIN evaluación, agenda directo
+REGLA SIMPLE:
+- ¿Menciona palabra "ORTODONCIA" o "BRACKETS" o "ALINEADORES"? → Evaluación $100k (cubre ortodoncia + TODO lo demás)
+- ¿NO menciona ortodoncia? → Evaluación $80k (para diseño, calzas, implantes, prótesis, etc.)
+- ¿Solo blanqueamiento/limpieza/endodoncia/cordales/extracciones? → SIN evaluación (directo)
 
-EJEMPLOS:
-"ortodoncia y calzas" → $100k (mencionó ortodoncia)
-"solo calzas" → $80k (NO mencionó ortodoncia)
-"calza y limpieza" → $80k para calza + limpieza agenda directo
-"blanqueamiento" → Directo sin evaluación
+EJEMPLOS CORRECTOS:
+"ortodoncia" → $100k ✅
+"ortodoncia y calzas" → $100k ✅
+"brackets y diseño" → $100k ✅
+"solo calzas" → $80k ✅
+"diseño de sonrisa" → $80k ✅
+"calza y limpieza" → $80k para calza + limpieza directo ✅
+"implantes" → $80k ✅
+"prótesis" → $80k ✅
+"blanqueamiento" → Directo, sin evaluación ✅
 
-SIN eval (directo): Blanqueamiento, limpieza, endodoncia, cordales, extracciones
-CON eval $100k: Ortodoncia (cubre TODO)
-CON eval $80k: Diseño, calzas, rehab (sin ortodoncia)
+NUNCA DIGAS:
+❌ "evaluación $100k" si NO mencionaron ortodoncia/brackets/alineadores
+❌ "evaluación $80k" si SÍ mencionaron ortodoncia
 
 BLANQUEAMIENTO (directo):
 2 sesiones/1 cita: $800k | 4 sesiones/2 citas: $1.5M
@@ -645,7 +668,10 @@ La evaluación son $80k (incluye diseño digital para ver cómo quedarías). Cas
 "Te entiendo. Aquí no somos los más baratos pero sí los que cuidan mejor tu salud dental a largo plazo. No desgastamos dientes ni alargamos tratamientos innecesariamente. Financiamos sin intereses para facilitar."
 
 "Lo voy a pensar":
-"Perfecto. Ten en cuenta que los problemas dentales empeoran con el tiempo. Si es por presupuesto, financiamos sin intereses. ¿Hay algo específico que te frene?"
+"Perfecto, tómate tu tiempo. Solo ten en cuenta que los problemas dentales empeoran con el tiempo y se vuelven más caros de tratar. Si es por presupuesto, financiamos sin intereses. Si cambias de opinión, aquí estoy."
+
+"Ya no estoy interesado / No me interesa":
+"Entiendo perfectamente. Si en algún momento cambias de opinión o necesitas orientación sobre salud dental, aquí estaré. Cuida mucho tu sonrisa 😊"
 
 "¿Trabajan con mi seguro?":
 "No, desde mayo 2025 somos 100% privado. Dejamos las EPS para enfocarnos en calidad sin restricciones. Financiamos directo para facilitar acceso."
@@ -735,7 +761,7 @@ CRÍTICO: Texto ANTES de [HUMANO]. NO respondas después.
         if (isUninterested(chatHistory[from])) {
           console.log(`🔴 Paciente desinteresado detectado: ${from}`)
           console.log(`📋 Historial: ${JSON.stringify(chatHistory[from].slice(-2))}`)
-          await archiveUninterestedChat(sock, from, phoneNumber)
+          await handleUninterestedChat(sock, from, phoneNumber)
           // Limpiar estado
           delete chatHistory[from]
           delete hasGreeted[from]
@@ -787,8 +813,11 @@ async function transferToHuman(sock, from, phoneNumber, conversationHistory) {
   // Extraer número real del paciente (phoneNumber ya viene con remoteJidAlt priorizado)
   const realPhoneNumber = extractPhoneNumber(phoneNumber)
   
-  // ✅ Marcar chat como prioritario (NO LEÍDO)
-  await markAsPriorityChat(sock, from)
+  // ⚠️ markAsPriorityChat deshabilitado (chatModify no funciona por problemas de sesión Baileys)
+  // await markAsPriorityChat(sock, from)
+  
+  // SOLUCIÓN ALTERNATIVA: Admin debe marcar manualmente como no leído desde WhatsApp
+  console.log(`✅ Chat transferido a coordinadora (marcar como no leído manualmente)`)
 
   try {
     const summaryResponse = await openai.chat.completions.create({
@@ -938,25 +967,26 @@ function isUninterested(conversationHistory) {
 }
 
 // Archivar chat de paciente desinteresado
-async function archiveUninterestedChat(sock, from, phoneNumber) {
+async function handleUninterestedChat(sock, from, phoneNumber) {
   try {
-    console.log(`🔴 Intentando archivar chat: ${from}`)
+    console.log(`🔴 Paciente desinteresado detectado: ${from}`)
     
-    // Método 1: Archivar directamente
-    await sock.chatModify({ archive: true }, from)
+    // Agregar a lista de desinteresados (NO intentar archivar por problemas de Baileys)
+    uninterestedChats.add(from)
     
-    console.log(`📦 Chat archivado exitosamente: ${from}`)
+    console.log(`❄️ Chat agregado a lista de desinteresados`)
     
     // Extraer número real (phoneNumber ya viene con @s.whatsapp.net)
     const realPhoneNumber = phoneNumber.replace('@s.whatsapp.net', '')
     
     // Notificar al admin con link wa.me
     await sock.sendMessage(NOTIFY_NUMBER, {
-      text: `🔴 *Lead archivado (desinteresado)*
+      text: `🔴 *Lead desinteresado (bot ya no responderá)*
 
 📱 wa.me/${realPhoneNumber}
 
-Paciente mostró desinterés. Chat archivado automáticamente.
+Paciente mostró desinterés. Bot dejará de responder.
+Puedes archivar manualmente desde WhatsApp.
 
 ────────────────
 ⏰ ${new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })}`
@@ -964,8 +994,7 @@ Paciente mostró desinterés. Chat archivado automáticamente.
     
     console.log(`✅ Notificación enviada al admin`)
   } catch (err) {
-    console.error("⚠️ Error archivando chat:", err)
-    console.error("Error completo:", JSON.stringify(err, null, 2))
+    console.error("⚠️ Error manejando chat desinteresado:", err)
   }
 }
 
