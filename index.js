@@ -319,6 +319,19 @@ async function startBot() {
     if (!msg?.message || msg.key.fromMe) return
 
     const from = msg.key.remoteJid
+    
+    // ✅ IGNORAR estados de WhatsApp y broadcasts (causan crashes)
+    if (from === 'status@broadcast' || from.endsWith('@broadcast')) {
+      console.log('📢 Ignorando mensaje de estado/broadcast')
+      return
+    }
+    
+    // ✅ IGNORAR grupos (solo atender mensajes directos)
+    if (from.endsWith('@g.us')) {
+      console.log('👥 Ignorando mensaje de grupo')
+      return
+    }
+    
     // ✅ PRIORIDAD: Usar remoteJidAlt si existe (número real), sino usar participant o from
     const phoneNumber = msg.key.remoteJidAlt || msg.key.participant || from
     
@@ -1357,4 +1370,4 @@ server.listen(PORT, () => {
   console.log(`Server on port ${PORT}`);
 });
 
-startBot() 
+startBot()
