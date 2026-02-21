@@ -280,6 +280,9 @@ async function startBot() {
   sock.ev.on("creds.update", saveCreds)  // ✅ ACTIVO: Guarda sesión automáticamente (persiste entre reinicios)
   // sock.ev.on("creds.update", () => {})  // ⚠️ DESCOMENTAR solo para testing (NO guarda sesión)
 
+  // ✅ CRÍTICO: Ignorar errores de descifrado de estados/broadcasts
+  sock.ev.on("messages.update", () => {}) // Ignorar actualizaciones
+
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
     if (qr) {
       console.log('\n🔄 Escanea este QR para conectar el bot:')
@@ -314,26 +317,26 @@ async function startBot() {
   })
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
+    try {
+      const msg = messages[0]
+      if (!msg?.message || msg.key.fromMe) return
 
-    const msg = messages[0]
-    if (!msg?.message || msg.key.fromMe) return
-
-    const from = msg.key.remoteJid
-    
-    // ✅ IGNORAR estados de WhatsApp y broadcasts (causan crashes)
-    if (from === 'status@broadcast' || from.endsWith('@broadcast')) {
-      console.log('📢 Ignorando mensaje de estado/broadcast')
-      return
-    }
-    
-    // ✅ IGNORAR grupos (solo atender mensajes directos)
-    if (from.endsWith('@g.us')) {
-      console.log('👥 Ignorando mensaje de grupo')
-      return
-    }
-    
-    // ✅ PRIORIDAD: Usar remoteJidAlt si existe (número real), sino usar participant o from
-    const phoneNumber = msg.key.remoteJidAlt || msg.key.participant || from
+      const from = msg.key.remoteJid
+      
+      // ✅ IGNORAR estados de WhatsApp y broadcasts (causan crashes)
+      if (from === 'status@broadcast' || from.endsWith('@broadcast')) {
+        console.log('📢 Ignorando mensaje de estado/broadcast')
+        return
+      }
+      
+      // ✅ IGNORAR grupos (solo atender mensajes directos)
+      if (from.endsWith('@g.us')) {
+        console.log('👥 Ignorando mensaje de grupo')
+        return
+      }
+      
+      // ✅ PRIORIDAD: Usar remoteJidAlt si existe (número real), sino usar participant o from
+      const phoneNumber = msg.key.remoteJidAlt || msg.key.participant || from
     
     // DEBUG: Ver información del mensaje para diagnosticar número
     console.log('\n========== DEBUG NÚMERO ==========')
@@ -1115,6 +1118,15 @@ Si es horario laboral responde en 10-15 min. Si no, mañana a primera hora.
     // ✅ Liberar lock inmediatamente después de crear el timer
     processingLocks[from] = false
     console.log(`🔓 Lock liberado para ${from}\n`)
+    
+    } catch (error) {
+      // ✅ CAPTURAR CUALQUIER ERROR y evitar que crashee el bot
+      console.log('⚠️ Error procesando mensaje:', error.message)
+      // Si es error de descifrado, lo ignoramos silenciosamente
+      if (error.message && error.message.includes('decrypt')) {
+        console.log('   (Probablemente estado de WhatsApp - ignorado)')
+      }
+    }
   })
 }
 
@@ -1370,4 +1382,26 @@ server.listen(PORT, () => {
   console.log(`Server on port ${PORT}`);
 });
 
-startBot()
+// ✅ CRÍTICO: Capturar errores no manejados para evitar crashes
+process.on('unhandledRejection', (reason, promise) => {
+  // Ignorar errores de descifrado de estados
+  if (reason && reason.message && reason.message.includes('decrypt message')) {
+    console.log('📢 Ignorando error de descifrado de estado/broadcast')
+    return
+  }
+  console.error('⚠️ Unhandled Rejection:', reason)
+})
+
+process.on('uncaughtException', (error) => {
+  // Ignorar errores de descifrado de estados
+  if (error && error.message && error.message.includes('decrypt message')) {
+    console.log('📢 Ignorando error de descifrado de estado/broadcast')
+    return
+  }
+  console.error('⚠️ Uncaught Exception:', error)
+})
+
+startBot().catch(err => {
+  console.error('❌ Error fatal iniciando bot:', err)
+  process.exit(1)
+})
