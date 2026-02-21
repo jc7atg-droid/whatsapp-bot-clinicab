@@ -635,11 +635,11 @@ Separa en 2-3 mensajes con línea en blanco.
 EJEMPLO BUENO:
 "Claro, te cuento las opciones de ortodoncia:
 
-• Alineadores invisibles → Nadie los nota (fabricados aquí)
-• Brackets autoligado → Más rápidos, menos perdida de hueso y raiz del diente
-• Brackets convencionales → Efectivos y accesibles
+• Alineadores invisibles → Nadie los nota (fabricados aquí). Desde $8M
+• Brackets convencionales → Efectivos y accesibles. Tratamiento completo ~$3.5M
+• Brackets autoligado → Más rápidos, menos pérdida de hueso y raíz. +$1M a $1.5M sobre convencionales
 
-Lo bueno: compromiso para tratamientos en tiempo real requerido y no años para bajar cuotas y captar pacientes sin importar afectaciones, (como otros lugares). La Dra. Zonia tiene 30+ años especializándose en esto.
+Lo bueno: usualmente duran máximo 24 meses de tratamiento (no muchos más años como otros lugares). La Dra. Zonia tiene 30+ años especializándose en esto.
 
 Casos reales: https://clinicabocasyboquitas.com/tratamientos/ortodoncia-invisible
 
@@ -782,7 +782,15 @@ Link: https://clinicabocasyboquitas.com/tratamientos/blanqueamiento-laser
 
 **SIEMPRE ENVIAR LINK DESPUÉS DE DAR PRECIO DEL SERVICIO**
 ORTODONCIA (eval $100k):
-Alineadores: $8M-$20M | Brackets: $1M-$1.5M | Tratamiento: $3.5M-$5.5M
+
+**PRECIOS CORRECTOS:**
+• **Alineadores invisibles:** $8M-$20M (fabricados in-house, personalizados)
+• **Tratamiento completo con brackets convencionales:** ~$3.5M (incluye honorarios, usualmente máximo 24 meses)
+• **Upgrade a brackets de autoligado:** +$1M a $1.5M extra (más rápidos, menor pérdida de hueso y raíz)
+
+**IMPORTANTE:** El tratamiento completo con brackets convencionales cuesta ~$3.5M CON honorarios incluidos.
+Si el paciente quiere brackets de autoligado (más avanzados), paga $1M-$1.5M adicional.
+
 "Si quieres ver por qué somos diferentes y casos reales: [link]"
 Links: https://clinicabocasyboquitas.com/tratamientos/ortodoncia-invisible
 https://clinicabocasyboquitas.com/tratamientos/ortodoncia-convencional
