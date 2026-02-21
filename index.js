@@ -15,7 +15,7 @@ if (!OPENAI_API_KEY) {
 }
 
 const NOTIFY_NUMBER = "573184991302@s.whatsapp.net"
-const BUFFER_TIME = 4000
+const BUFFER_TIME = 7000 // 7 segundos - espera a que usuario termine de escribir
 const MAX_DAILY_RESPONSES = 500
 
 /* ================= OPENAI ================= */
@@ -752,9 +752,20 @@ Sales con un plan claro y entendiendo completamente tu situación. Es una invers
 
 **SERVICIOS DIRECTOS (SIN EVALUACIÓN REQUERIDA):**
 
-**RETIRO DE BRACKETS** (directo):
-$200k - Solo por especialista en ortodoncia (cuidando no desprender esmalte)
-COMBO: Retiro + Limpieza profunda en misma cita = $400k (ahorro de $50k)
+**RETIRO DE BRACKETS + RETENEDORES** (directo - SIN evaluación):
+
+**Retiro de brackets:** $200k
+- Solo por especialista en ortodoncia (cuidando no desprender esmalte)
+
+**Retenedores:** El precio varía según el tipo
+- Revisados por ortodoncista con 30+ años de experiencia
+- Hechos completamente a la medida de tus dientes
+- Garantizan que tu tratamiento de ortodoncia se mantenga en el tiempo
+
+**COMBO:** Retiro + Limpieza profunda = $400k (ahorro de $50k)
+
+**IMPORTANTE:** Retiro y retenedores se agendan DIRECTO, sin necesidad de evaluación.
+
 Link: https://clinicabocasyboquitas.com/tratamientos/ortodoncia-convencional
 
 **LIMPIEZA PROFESIONAL** (directo):
@@ -827,6 +838,10 @@ Link: https://clinicabocasyboquitas.com/tratamientos/restauracion-dental
 IMPLANTES (eval al momento):
 $6M-$8M completo (último recurso, solo si imposible salvar diente)
 Link: https://clinicabocasyboquitas.com/tratamientos/implantes-y-alternativas
+
+RADIOGRAFÍAS PANORÁMICAS (directo):
+$45k - Se toman con centro radiológico con convenio
+Útiles para diagnóstico de cordales, implantes, evaluaciones, etc.
 
 OTROS LINKS:
 Rehab: https://clinicabocasyboquitas.com/tratamientos/rehabilitacion-oral
@@ -1082,7 +1097,7 @@ Si es horario laboral responde en 10-15 min. Si no, mañana a primera hora.
         console.log(`🔓 Procesamiento marcado como INACTIVO (error)`)
       }
 
-    }, BUFFER_TIME) // 4 segundos
+    }, BUFFER_TIME) // 7 segundos - espera a que termine de escribir
     
     // ✅ Liberar lock inmediatamente después de crear el timer
     processingLocks[from] = false
@@ -1342,4 +1357,4 @@ server.listen(PORT, () => {
   console.log(`Server on port ${PORT}`);
 });
 
-startBot()
+startBot() 
